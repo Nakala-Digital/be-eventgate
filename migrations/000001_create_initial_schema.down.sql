@@ -1,0 +1,17 @@
+-- EVG-40: Initial Database Schema Migration (Down)
+-- Based on EVG-34 Data Entity & Relationship Draft Revision 3
+
+DROP TABLE IF EXISTS check_in_logs CASCADE;
+DROP TABLE IF EXISTS staff_assignments CASCADE;
+DROP TABLE IF EXISTS tickets CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS form_responses CASCADE;
+DROP TABLE IF EXISTS registrations CASCADE;
+DROP TABLE IF EXISTS participants CASCADE;
+DROP TABLE IF EXISTS ticket_types CASCADE;
+DROP TABLE IF EXISTS question_options CASCADE;
+DROP TABLE IF EXISTS dynamic_questions CASCADE;
+DROP TABLE IF EXISTS event_approval_logs CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
