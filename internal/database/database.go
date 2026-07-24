@@ -10,7 +10,7 @@ import (
 	"be-eventgate/internal/models"
 )
 
-// Connect membuka koneksi ke PostgreSQL menggunakan GORM.
+// Connect menginisialisasi dan membuka koneksi ke PostgreSQL melalui GORM.
 func Connect(cfg config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
@@ -23,10 +23,9 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-// Migrate menjalankan auto-migration untuk model-model yang terkait EVG-41.
-// KALAU project Anda sudah punya migration system sendiri (misal golang-migrate
-// dengan file .sql), GANTI fungsi ini / jangan dipanggil, dan buat migration
-// .sql terpisah untuk tabel roles & users mengikuti pola project yang sudah ada.
+// Migrate mengeksekusi migrasi skema basis data secara otomatis untuk model terkait.
+// Fungsionalitas ini dapat disesuaikan apabila proyek telah menggunakan
+// sistem migrasi berbasis SQL secara terpisah.
 func Migrate(db *gorm.DB) error {
 	return db.AutoMigrate(&models.Role{}, &models.User{})
 }

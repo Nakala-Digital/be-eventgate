@@ -18,8 +18,8 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{DB: db}
 }
 
-// UserProfile adalah representasi user yang aman ditampilkan ke client
-// (tidak menyertakan password hash).
+// UserProfile merupakan representasi data pengguna yang aman untuk
+// dikirimkan sebagai respons HTTP (tanpa informasi kata sandi).
 type UserProfile struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
@@ -38,10 +38,9 @@ func toUserProfile(u models.User) UserProfile {
 	}
 }
 
-// Me mengembalikan data user yang sedang login, diambil dari token (via
-// context yang disisipkan middleware.RequireAuth).
-//
-// GET /api/auth/me   (wajib header: Authorization: Bearer <token>)
+// Me mengambil dan mengembalikan profil pengguna yang sedang terautentikasi.
+// Data diperoleh dari konteks permintaan yang telah divalidasi oleh middleware.
+// Rute: GET /api/auth/me
 func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {

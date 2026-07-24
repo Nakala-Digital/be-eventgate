@@ -4,29 +4,28 @@ import "context"
 
 type contextKey string
 
-// Key context yang dipakai untuk menyisipkan data user hasil validasi token
-// ke dalam request context oleh RequireAuth, lalu dibaca oleh handler /
-// middleware lain (mis. RequireRole).
+// Kunci-kunci konteks ini difungsikan untuk mendistribusikan data pengguna 
+// hasil validasi JWT secara aman ke seluruh lapisan siklus permintaan.
 const (
 	ContextUserID   contextKey = "user_id"
 	ContextUsername contextKey = "username"
 	ContextRoleName contextKey = "role_name"
 )
 
-// GetUserID mengambil user_id dari context. ok=false kalau tidak ada
-// (artinya request belum melewati RequireAuth).
+// GetUserID mengekstraksi ID pengguna dari konteks yang aktif.
+// Mengembalikan nilai boolean false jika konteks tidak terautentikasi.
 func GetUserID(ctx context.Context) (uint, bool) {
 	v, ok := ctx.Value(ContextUserID).(uint)
 	return v, ok
 }
 
-// GetUsername mengambil username dari context.
+// GetUsername mengekstraksi nama pengguna dari konteks yang aktif.
 func GetUsername(ctx context.Context) (string, bool) {
 	v, ok := ctx.Value(ContextUsername).(string)
 	return v, ok
 }
 
-// GetRoleName mengambil role_name dari context.
+// GetRoleName mengekstraksi nama peran pengguna dari konteks yang aktif.
 func GetRoleName(ctx context.Context) (string, bool) {
 	v, ok := ctx.Value(ContextRoleName).(string)
 	return v, ok

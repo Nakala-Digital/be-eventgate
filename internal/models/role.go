@@ -1,6 +1,6 @@
 package models
 
-// Role merepresentasikan tabel `roles` di database.
+// Role mendefinisikan skema entitas peran dalam basis data.
 type Role struct {
 	ID          uint      `gorm:"primaryKey;column:role_id;autoIncrement" json:"id"`
 	RoleName    string    `gorm:"uniqueIndex;size:50;not null" json:"role_name"`
@@ -9,8 +9,8 @@ type Role struct {
 
 func (Role) TableName() string { return "roles" }
 
-// Konstanta nama role. JANGAN hardcode string literal role di tempat lain,
-// selalu pakai konstanta ini supaya konsisten di seluruh codebase.
+// Kumpulan konstanta peran pengguna. Direkomendasikan untuk senantiasa 
+// menggunakan referensi ini demi menjaga integritas dan konsistensi data.
 const (
 	RoleSuperAdmin     = "super_admin"
 	RoleAdminPanitia   = "admin_panitia"

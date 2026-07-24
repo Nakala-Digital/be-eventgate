@@ -32,10 +32,9 @@ type LoginResponse struct {
 	User  UserProfile `json:"user"`
 }
 
-// Login memvalidasi email+password, lalu mengembalikan JWT kalau berhasil.
-//
-// POST /api/auth/login
-// Body: {"email": "...", "password": "..."}
+// Login memproses autentikasi pengguna dengan memvalidasi kredensial.
+// Apabila berhasil, sistem akan mengembalikan JSON Web Token (JWT).
+// Rute: POST /api/auth/login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -50,8 +49,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := h.DB.Preload("Role").Where("email = ?", req.Email).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
-		// Sengaja pakai pesan generik (bukan "email not found") supaya tidak
-		// membocorkan email mana yang terdaftar di sistem.
+		// Menggunakan pesan kesalahan generik demi keamanan guna
+		// mencegah eksploitasi pencacahan akun (account enumeration).
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}

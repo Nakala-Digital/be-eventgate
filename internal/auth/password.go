@@ -2,7 +2,7 @@ package auth
 
 import "golang.org/x/crypto/bcrypt"
 
-// HashPassword meng-hash password plaintext memakai bcrypt.
+// HashPassword melakukan enkripsi satu arah pada kata sandi menggunakan algoritma bcrypt.
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -11,7 +11,7 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), nil
 }
 
-// CheckPassword membandingkan password plaintext dengan hash yang tersimpan.
+// CheckPassword memvalidasi kecocokan antara kata sandi teks dengan hash yang tersimpan di basis data.
 func CheckPassword(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil

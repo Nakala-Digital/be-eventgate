@@ -6,11 +6,9 @@ import (
 	"be-eventgate/internal/httpx"
 )
 
-// RequireRole membatasi akses route hanya untuk role yang disebutkan.
-// WAJIB dipasang SETELAH RequireAuth di chain middleware (butuh role_name
-// yang sudah disisipkan RequireAuth ke context). Kalau role tidak sesuai
-// -> 403 Forbidden. Kalau context kosong (berarti RequireAuth belum jalan,
-// salah urutan pemasangan middleware) -> 401 Unauthorized.
+// RequireRole berfungsi membatasi akses rute hanya bagi peran (role) yang diizinkan.
+// Middleware ini harus diimplementasikan setelah RequireAuth
+// guna mengevaluasi identitas pengguna yang tersimpan di dalam konteks.
 func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 	allowed := make(map[string]bool, len(allowedRoles))
 	for _, r := range allowedRoles {

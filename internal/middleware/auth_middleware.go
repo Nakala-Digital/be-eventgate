@@ -9,10 +9,9 @@ import (
 	"be-eventgate/internal/httpx"
 )
 
-// RequireAuth memvalidasi Bearer token JWT di header "Authorization".
-// Kalau valid, data user (user_id, username, role_name) disisipkan ke
-// request context supaya bisa dipakai handler & middleware role berikutnya
-// (RequireRole). Kalau tidak valid/tidak ada -> 401 Unauthorized.
+// RequireAuth bertugas memvalidasi token JWT pada header Authorization HTTP.
+// Jika valid, data pengguna akan diinjeksi ke dalam konteks permintaan
+// untuk digunakan oleh handler maupun middleware otorisasi selanjutnya.
 func RequireAuth(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -12,11 +12,8 @@ import (
 	"be-eventgate/internal/models"
 )
 
-// New menyusun semua route EVG-41 (auth & RBAC).
-//
-// SESUAIKAN: kalau project Anda sudah punya router.go / main.go sendiri,
-// pindahkan isi function ini ke dalam struktur yang sudah ada. Yang penting
-// urutan middleware-nya: RequireAuth dulu, baru RequireRole.
+// New melakukan inisialisasi dan pengelompokan rute HTTP untuk fungsionalitas
+// autentikasi serta implementasi sistem hierarki keamanan (Middleware).
 func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
@@ -26,17 +23,16 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	userHandler := handlers.NewUserHandler(db)
 
 	r.Route("/api", func(r chi.Router) {
-		// Public
+		// Rute Publik (Tanpa Autentikasi)
 		r.Post("/auth/login", authHandler.Login)
 
-		// Protected (butuh token valid)
+		// Rute Terproteksi (Memerlukan JWT Token)
 		r.Group(func(r chi.Router) {
 			r.Use(appmw.RequireAuth(jwtSecret))
 
 			r.Get("/auth/me", userHandler.Me)
 
-			// Contoh route yang dibatasi role tertentu (pola ini dipakai untuk
-			// endpoint-endpoint task berikutnya, mis. EVG-45/47/49).
+			// Area Proteksi RBAC: Memerlukan kewenangan peran super_admin
 			r.Group(func(r chi.Router) {
 				r.Use(appmw.RequireRole(models.RoleSuperAdmin))
 				r.Get("/admin/ping", func(w http.ResponseWriter, r *http.Request) {

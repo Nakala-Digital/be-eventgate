@@ -38,7 +38,7 @@ func GenerateToken(secret string, expiryHours int, userID uint, username, roleNa
 }
 
 // ParseToken memvalidasi signature & masa berlaku token, lalu mengembalikan
-// claims di dalamnya kalau valid.
+// dan mengembalikan objek claims apabila token dinyatakan valid.
 func ParseToken(secret, tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
