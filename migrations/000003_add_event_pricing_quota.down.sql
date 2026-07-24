@@ -1,0 +1,8 @@
+-- EVG-43: Rollback event minimum fields additions
+ALTER TABLE events DROP COLUMN IF EXISTS quota;
+ALTER TABLE events DROP COLUMN IF EXISTS price;
+ALTER TABLE events DROP COLUMN IF EXISTS is_paid;
+ALTER TABLE events DROP COLUMN IF EXISTS end_time;
+ALTER TABLE events DROP COLUMN IF EXISTS start_time;
+ALTER TABLE events DROP COLUMN IF EXISTS banner;
+ALTER TABLE events DROP COLUMN IF EXISTS title;

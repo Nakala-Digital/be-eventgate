@@ -21,8 +21,9 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 
 	authHandler := handlers.NewAuthHandler(db, jwtSecret, jwtExpiryHrs)
 	userHandler := handlers.NewUserHandler(db)
+	eventHandler := handlers.NewEventHandler(db)
 
-	r.Route("/api", func(r chi.Router) {
+	registerAPIRoutes := func(r chi.Router) {
 		// Rute Publik (Tanpa Autentikasi)
 		r.Post("/auth/login", authHandler.Login)
 
@@ -31,6 +32,18 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 			r.Use(appmw.RequireAuth(jwtSecret))
 
 			r.Get("/auth/me", userHandler.Me)
+
+			// Rute Event Read (List & Detail)
+			r.Get("/events", eventHandler.List)
+			r.Get("/events/{id}", eventHandler.GetByID)
+
+			// Area Proteksi RBAC: Manajemen Event (Create, Update, Delete)
+			r.Group(func(r chi.Router) {
+				r.Use(appmw.RequireRole(models.RoleSuperAdmin, models.RoleAdminPanitia))
+				r.Post("/events", eventHandler.Create)
+				r.Put("/events/{id}", eventHandler.Update)
+				r.Delete("/events/{id}", eventHandler.Delete)
+			})
 
 			// Area Proteksi RBAC: Memerlukan kewenangan peran super_admin
 			r.Group(func(r chi.Router) {
@@ -42,7 +55,10 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 				})
 			})
 		})
-	})
+	}
+
+	r.Route("/api", registerAPIRoutes)
+	r.Route("/api/v1", registerAPIRoutes)
 
 	return r
 }
