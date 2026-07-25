@@ -36,6 +36,28 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 			// Rute Event Read (List & Detail)
 			r.Get("/events", eventHandler.List)
 			r.Get("/events/{id}", eventHandler.GetByID)
+			r.Get("/events/{id}/approval-logs", eventHandler.ListApprovalLogs)
+
+			// Khusus admin_panitia: submit approval.
+			r.Group(func(r chi.Router) {
+				r.Use(appmw.RequireRole(models.RoleAdminPanitia))
+				r.Post("/events/{id}/submit", eventHandler.SubmitForApproval)
+			})
+
+			// Khusus super_admin/school_reviewer: approve/reject/revisi.
+			r.Group(func(r chi.Router) {
+				r.Use(appmw.RequireRole(models.RoleSuperAdmin, models.RoleSchoolReviewer))
+				r.Post("/events/{id}/approve", eventHandler.ApproveEvent)
+				r.Post("/events/{id}/reject", eventHandler.RejectEvent)
+				r.Post("/events/{id}/request-revision", eventHandler.RequestRevision)
+			})
+
+			// Khusus super_admin: publish/unpublish.
+			r.Group(func(r chi.Router) {
+				r.Use(appmw.RequireRole(models.RoleSuperAdmin))
+				r.Post("/events/{id}/publish", eventHandler.PublishEvent)
+				r.Post("/events/{id}/unpublish", eventHandler.UnpublishEvent)
+			})
 
 			// Area Proteksi RBAC: Manajemen Event (Create, Update, Delete)
 			r.Group(func(r chi.Router) {
