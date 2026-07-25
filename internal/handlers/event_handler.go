@@ -67,7 +67,9 @@ func isValidStatus(status string) bool {
 	}
 }
 
-// Create memproses pembuatan event baru.
+// Create memproses pembuatan event baru oleh Admin Panitia.
+// Event yang baru dibuat akan secara otomatis mendapatkan status 'draft'
+// dan membutuhkan proses persetujuan (approval) sebelum bisa dipublikasikan.
 // Endpoint: POST /api/events
 func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
@@ -188,6 +190,13 @@ func (h *EventHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch event")
+		return
+	}
+
+	roleName, _ := middleware.GetRoleName(r.Context())
+	userID, _ := middleware.GetUserID(r.Context())
+	if !canViewEvent(roleName, userID, &event) {
+		httpx.WriteError(w, http.StatusForbidden, "you don't have permission to view this event")
 		return
 	}
 
