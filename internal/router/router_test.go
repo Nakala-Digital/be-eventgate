@@ -3,9 +3,11 @@ package router_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"be-eventgate/internal/models"
 	"be-eventgate/internal/router"
@@ -103,5 +105,127 @@ func TestRouter_FullAuthFlow(t *testing.T) {
 	}
 	if pingResp2.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 for super_admin accessing super_admin-only route, got %d", pingResp2.StatusCode)
+	}
+}
+
+func TestRouter_EventApprovalWorkflow(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+
+	if _, err := testutil.CreateTestUser(db, "panitia_workflow", "panitia_workflow@eventgate.test", "Password123!", models.RoleAdminPanitia, true); err != nil {
+		t.Fatalf("failed to create admin_panitia test user: %v", err)
+	}
+	if _, err := testutil.CreateTestUser(db, "superadmin_workflow", "superadmin_workflow@eventgate.test", "Password123!", models.RoleSuperAdmin, true); err != nil {
+		t.Fatalf("failed to create super_admin test user: %v", err)
+	}
+	if _, err := testutil.CreateTestUser(db, "staf_workflow", "staf_workflow@eventgate.test", "Password123!", models.RoleStafLapangan, true); err != nil {
+		t.Fatalf("failed to create staf_lapangan test user: %v", err)
+	}
+
+	r := router.New(db, "test-secret", 24)
+	server := httptest.NewServer(r)
+	defer server.Close()
+
+	// 1. Tanpa token -> 401
+	noAuthResp, err := http.Get(server.URL + "/api/events/1")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	if noAuthResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without token, got %d", noAuthResp.StatusCode)
+	}
+
+	_, panitiaToken := doLogin(t, server.URL, "panitia_workflow@eventgate.test", "Password123!")
+	_, superAdminToken := doLogin(t, server.URL, "superadmin_workflow@eventgate.test", "Password123!")
+	_, stafToken := doLogin(t, server.URL, "staf_workflow@eventgate.test", "Password123!")
+
+	// 2. Admin Panitia membuat event draft — payload sesuai kontrak API yang ADA
+	createBody, _ := json.Marshal(map[string]interface{}{
+		"title":       "Workflow Test Event",
+		"description": "Deskripsi test",
+		"banner":      "http://example.com/banner.jpg",
+		"location":    "Aula",
+		"start_time":  time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+		"end_time":    time.Now().Add(72 * time.Hour).Format(time.RFC3339),
+		"is_paid":     false,
+		"quota":       100,
+	})
+	createReq, _ := http.NewRequest(http.MethodPost, server.URL+"/api/events", bytes.NewReader(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+panitiaToken)
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp, err := http.DefaultClient.Do(createReq)
+	if err != nil {
+		t.Fatalf("create event request error: %v", err)
+	}
+	if createResp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201 creating event, got %d", createResp.StatusCode)
+	}
+	var created struct {
+		ID uint `json:"id"`
+	}
+	_ = json.NewDecoder(createResp.Body).Decode(&created)
+
+	// 3. Admin Panitia mencoba publish -> harus 403 lewat middleware sungguhan
+	publishAsPanitiaReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/events/%d/publish", server.URL, created.ID), nil)
+	publishAsPanitiaReq.Header.Set("Authorization", "Bearer "+panitiaToken)
+	publishAsPanitiaResp, err := http.DefaultClient.Do(publishAsPanitiaReq)
+	if err != nil {
+		t.Fatalf("publish request error: %v", err)
+	}
+	if publishAsPanitiaResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 when admin_panitia tries to publish, got %d", publishAsPanitiaResp.StatusCode)
+	}
+
+	// 4. Butuh ticket type dulu (lewat DB langsung, belum ada endpoint CRUD-nya), lalu submit
+	if _, err := testutil.CreateTestTicketType(db, created.ID); err != nil {
+		t.Fatalf("failed to create ticket type: %v", err)
+	}
+	submitReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/events/%d/submit", server.URL, created.ID), nil)
+	submitReq.Header.Set("Authorization", "Bearer "+panitiaToken)
+	submitResp, err := http.DefaultClient.Do(submitReq)
+	if err != nil {
+		t.Fatalf("submit request error: %v", err)
+	}
+	if submitResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 submitting event, got %d", submitResp.StatusCode)
+	}
+
+	// 5. Super Admin approve -> approved
+	approveReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/events/%d/approve", server.URL, created.ID), bytes.NewReader([]byte("{}")))
+	approveReq.Header.Set("Authorization", "Bearer "+superAdminToken)
+	approveResp, err := http.DefaultClient.Do(approveReq)
+	if err != nil {
+		t.Fatalf("approve request error: %v", err)
+	}
+	if approveResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 approving event, got %d", approveResp.StatusCode)
+	}
+
+	// 6. Super Admin publish -> published
+	publishReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/events/%d/publish", server.URL, created.ID), bytes.NewReader([]byte("{}")))
+	publishReq.Header.Set("Authorization", "Bearer "+superAdminToken)
+	publishResp, err := http.DefaultClient.Do(publishReq)
+	if err != nil {
+		t.Fatalf("publish request error: %v", err)
+	}
+	if publishResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 publishing event, got %d", publishResp.StatusCode)
+	}
+	var published struct {
+		Status string `json:"status"`
+	}
+	_ = json.NewDecoder(publishResp.Body).Decode(&published)
+	if published.Status != models.EventStatusPublished {
+		t.Fatalf("expected final status published, got %s", published.Status)
+	}
+
+	// 7. Staf Lapangan tidak boleh lihat detail event (scope URD: scan QR saja)
+	stafGetReq, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/events/%d", server.URL, created.ID), nil)
+	stafGetReq.Header.Set("Authorization", "Bearer "+stafToken)
+	stafGetResp, err := http.DefaultClient.Do(stafGetReq)
+	if err != nil {
+		t.Fatalf("staf get request error: %v", err)
+	}
+	if stafGetResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for staf_lapangan viewing event detail, got %d", stafGetResp.StatusCode)
 	}
 }
