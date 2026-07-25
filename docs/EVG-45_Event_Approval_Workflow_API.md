@@ -10,7 +10,7 @@
 | **Task Code**     | EVG-45                                                       |
 | **Feature**       | Event Approval Workflow & State Machine                      |
 | **Tech Stack**    | Golang (Go), PostgreSQL, GORM                                |
-| **Author**        | Backend Development Team                                     |
+| **Author**        | Hanif                                    |
 | **Status**        | Completed / Ready for Review                                 |
 
 ---
