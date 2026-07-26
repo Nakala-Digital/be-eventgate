@@ -10,7 +10,7 @@
 | **Task Code**     | EVG-41 (Sprint 2)                                            |
 | **Feature**       | Authentication, JWT, and Role-Based Access Control (RBAC)    |
 | **Tech Stack**    | Golang (Go), PostgreSQL, `golang-jwt/v5`, `bcrypt`           |
-| **Author**        | Backend Development Team                                     |
+| **Author**        | Hanif                                   |
 | **Status**        | Completed / Ready for Review                                 |
 
 ---
