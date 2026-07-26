@@ -29,7 +29,10 @@ func newEventRequest(method, url string, userID uint, roleName string, body inte
 }
 
 func withChiParam(req *http.Request, key, value string) *http.Request {
-	rctx := chi.NewRouteContext()
+	rctx := chi.RouteContext(req.Context())
+	if rctx == nil {
+		rctx = chi.NewRouteContext()
+	}
 	rctx.URLParams.Add(key, value)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
 	return req.WithContext(ctx)
@@ -254,12 +257,11 @@ func TestPublishEvent_Success(t *testing.T) {
 	}
 }
 
-// TestPublishEvent_DoesNotWriteApprovalLog mengunci Bug #1 yang pernah
-// ditemukan: kolom `action` di event_approval_logs punya CHECK constraint
-// yang cuma izinkan submitted/approved/rejected/revision_requested — TIDAK
-// ada "published". Kalau ada yang menambahkan log-write ke PublishEvent lagi
-// di masa depan tanpa update skema, test ini akan gagal duluan di SQLite
-// (karena hitungan log berubah), bukan baru ketahuan pas Postgres menolak.
+// TestPublishEvent_DoesNotWriteApprovalLog memvalidasi bahwa proses publikasi
+// tidak mencatat data pada tabel riwayat persetujuan. Tabel event_approval_logs
+// memiliki batasan validasi yang tidak menyertakan status 'published'.
+// Pengujian ini mencegah terjadinya kegagalan integrasi apabila terdapat
+// penambahan fungsi pencatatan secara sepihak di masa depan.
 func TestPublishEvent_DoesNotWriteApprovalLog(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia10", "panitia10@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
@@ -380,9 +382,10 @@ func TestGetByID_SuperAdminCanViewAnyEvent(t *testing.T) {
 	}
 }
 
-// TestGetByID_StafLapangan_CannotViewEvent mengunci keputusan final: scope
-// Staf Lapangan menurut URD hanya scan QR/check-in, TIDAK termasuk melihat
-// detail event maupun approval log.
+// TestGetByID_StafLapangan_CannotViewEvent memvalidasi batasan hak akses
+// berdasarkan dokumen spesifikasi. Peran staf lapangan dikhususkan untuk
+// fungsi operasional presensi sehingga tidak diizinkan mengakses detail
+// kegiatan ataupun riwayat persetujuan.
 func TestGetByID_StafLapangan_CannotViewEvent(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia17", "panitia17@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
