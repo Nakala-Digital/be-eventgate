@@ -33,5 +33,7 @@ func Migrate(db *gorm.DB) error {
 		&models.Event{}, 
 		&models.EventApprovalLog{}, 
 		&models.TicketType{},
+		&models.DynamicQuestion{},
+		&models.QuestionOption{},
 	)
 }

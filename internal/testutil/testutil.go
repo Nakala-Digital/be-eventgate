@@ -108,3 +108,19 @@ func CreateTestTicketType(db *gorm.DB, eventID uint) (*models.TicketType, error)
 	}
 	return &tt, nil
 }
+
+// CreateTestQuestion membuat satu entitas pertanyaan form dinamis yang dikaitkan dengan kegiatan tertentu.
+func CreateTestQuestion(db *gorm.DB, eventID uint, questionType, requirementType string) (*models.DynamicQuestion, error) {
+	q := models.DynamicQuestion{
+		EventID:         eventID,
+		QuestionText:    "Test Question",
+		QuestionType:    questionType,
+		RequirementType: requirementType,
+		DisplayOrder:    0,
+		IsActive:        true,
+	}
+	if err := db.Create(&q).Error; err != nil {
+		return nil, err
+	}
+	return &q, nil
+}
