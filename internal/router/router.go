@@ -22,6 +22,7 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	authHandler := handlers.NewAuthHandler(db, jwtSecret, jwtExpiryHrs)
 	userHandler := handlers.NewUserHandler(db)
 	eventHandler := handlers.NewEventHandler(db)
+	questionHandler := handlers.NewQuestionHandler(db)
 
 	registerAPIRoutes := func(r chi.Router) {
 		// Rute Publik (Tanpa Autentikasi)
@@ -57,6 +58,19 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 				r.Use(appmw.RequireRole(models.RoleSuperAdmin))
 				r.Post("/events/{id}/publish", eventHandler.PublishEvent)
 				r.Post("/events/{id}/unpublish", eventHandler.UnpublishEvent)
+			})
+
+			// Area EVG-47: Skema Formulir Dinamis
+			r.Route("/events/{id}/questions", func(r chi.Router) {
+				// Akses baca: Pemilik (admin_panitia), super_admin, atau school_reviewer.
+				// Mengikuti aturan visibilitas kegiatan yang sama dengan endpoint GetByID.
+				r.Get("/", questionHandler.ListByEvent)
+
+				// Akses pengelolaan (buat/ubah/hapus): Pemilik kegiatan atau super_admin.
+				// Validasi hak akses dilakukan di dalam handler berdasarkan data kegiatan.
+				r.Post("/", questionHandler.Create)
+				r.Put("/{questionID}", questionHandler.Update)
+				r.Delete("/{questionID}", questionHandler.Delete)
 			})
 
 			// Area Proteksi RBAC: Manajemen Event (Create, Update, Delete)

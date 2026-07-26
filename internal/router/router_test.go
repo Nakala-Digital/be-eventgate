@@ -229,3 +229,102 @@ func TestRouter_EventApprovalWorkflow(t *testing.T) {
 		t.Fatalf("expected 403 for staf_lapangan viewing event detail, got %d", stafGetResp.StatusCode)
 	}
 }
+
+// TestRouter_DynamicQuestionWorkflow menguji skenario EVG-47 secara end-to-end
+// melalui HTTP: Pembuatan kegiatan oleh Admin Panitia, penambahan pertanyaan
+// bertipe dropdown beserta opsinya, dan pengambilan skema formulir.
+func TestRouter_DynamicQuestionWorkflow(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+
+	if _, err := testutil.CreateTestUser(db, "panitia_q_e2e", "panitia_q_e2e@eventgate.test", "Password123!", models.RoleAdminPanitia, true); err != nil {
+		t.Fatalf("failed to create admin_panitia test user: %v", err)
+	}
+	if _, err := testutil.CreateTestUser(db, "panitia_q_e2e_other", "panitia_q_e2e_other@eventgate.test", "Password123!", models.RoleAdminPanitia, true); err != nil {
+		t.Fatalf("failed to create other admin_panitia test user: %v", err)
+	}
+
+	r := router.New(db, "test-secret", 24)
+	server := httptest.NewServer(r)
+	defer server.Close()
+
+	_, panitiaToken := doLogin(t, server.URL, "panitia_q_e2e@eventgate.test", "Password123!")
+	_, otherPanitiaToken := doLogin(t, server.URL, "panitia_q_e2e_other@eventgate.test", "Password123!")
+
+	createBody, _ := json.Marshal(map[string]interface{}{
+		"title":       "Event Form Test",
+		"description": "Deskripsi",
+		"banner":      "http://example.com/b.jpg",
+		"location":    "Aula",
+		"start_time":  time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+		"end_time":    time.Now().Add(72 * time.Hour).Format(time.RFC3339),
+		"is_paid":     false,
+		"quota":       50,
+	})
+	createReq, _ := http.NewRequest(http.MethodPost, server.URL+"/api/events", bytes.NewReader(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+panitiaToken)
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp, err := http.DefaultClient.Do(createReq)
+	if err != nil {
+		t.Fatalf("create event error: %v", err)
+	}
+	if createResp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201 creating event, got %d", createResp.StatusCode)
+	}
+	var created struct {
+		ID uint `json:"id"`
+	}
+	_ = json.NewDecoder(createResp.Body).Decode(&created)
+
+	// Pembuatan pertanyaan bertipe dropdown beserta opsi pendukungnya
+	questionBody, _ := json.Marshal(map[string]interface{}{
+		"question_text": "Ukuran baju?",
+		"question_type": "dropdown",
+		"options": []map[string]interface{}{
+			{"option_label": "S", "option_value": "S", "display_order": 1},
+			{"option_label": "M", "option_value": "M", "display_order": 2},
+		},
+	})
+	qReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/events/%d/questions", server.URL, created.ID), bytes.NewReader(questionBody))
+	qReq.Header.Set("Authorization", "Bearer "+panitiaToken)
+	qReq.Header.Set("Content-Type", "application/json")
+	qResp, err := http.DefaultClient.Do(qReq)
+	if err != nil {
+		t.Fatalf("create question error: %v", err)
+	}
+	if qResp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201 creating question, got %d", qResp.StatusCode)
+	}
+
+	// Admin panitia lain (bukan pemilik kegiatan) tidak memiliki izin untuk melihat skema formulir
+	otherGetReq, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/events/%d/questions", server.URL, created.ID), nil)
+	otherGetReq.Header.Set("Authorization", "Bearer "+otherPanitiaToken)
+	otherGetResp, err := http.DefaultClient.Do(otherGetReq)
+	if err != nil {
+		t.Fatalf("other panitia get questions error: %v", err)
+	}
+	if otherGetResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-owner admin_panitia listing questions, got %d", otherGetResp.StatusCode)
+	}
+
+	// Pemilik kegiatan memiliki izin melihat skema formulir yang memuat 1 pertanyaan dengan 2 opsi
+	getReq, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/events/%d/questions", server.URL, created.ID), nil)
+	getReq.Header.Set("Authorization", "Bearer "+panitiaToken)
+	getResp, err := http.DefaultClient.Do(getReq)
+	if err != nil {
+		t.Fatalf("get questions error: %v", err)
+	}
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 listing questions, got %d", getResp.StatusCode)
+	}
+	var questions []struct {
+		Options []struct{} `json:"options"`
+	}
+	_ = json.NewDecoder(getResp.Body).Decode(&questions)
+	if len(questions) != 1 {
+		t.Fatalf("expected 1 question, got %d", len(questions))
+	}
+	if len(questions[0].Options) != 2 {
+		t.Fatalf("expected 2 options, got %d", len(questions[0].Options))
+	}
+}
+
