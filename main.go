@@ -25,14 +25,14 @@ func main() {
         defer db.Close()
     }
 
-    // EVG-41 GORM Init
+    // Inisialisasi koneksi GORM.
+    // Pemanggilan intdb.Migrate (GORM AutoMigrate) telah dicabut dari siklus aplikasi utama
+    // untuk memastikan skema basis data hanya dikelola melalui berkas migrasi SQL statis.
     gormDB, err := intdb.Connect(*cfg)
     if err != nil {
         log.Fatalf("Gagal connect GORM: %v", err)
     }
-    if err := intdb.Migrate(gormDB); err != nil {
-        log.Fatalf("Gagal auto-migrate GORM: %v", err)
-    }
+
     if err := intdb.SeedRoles(gormDB); err != nil {
         log.Fatalf("Gagal seed roles: %v", err)
     }
