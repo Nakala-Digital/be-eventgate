@@ -109,6 +109,24 @@ func CreateTestTicketType(db *gorm.DB, eventID uint) (*models.TicketType, error)
 	return &tt, nil
 }
 
+// CreateTestTicketTypeWithOptions sama seperti CreateTestTicketType tapi
+// dengan kontrol penuh atas IsPaid/Price/MaxCapacity.
+func CreateTestTicketTypeWithOptions(db *gorm.DB, eventID uint, isPaid bool, price float64, maxCapacity int) (*models.TicketType, error) {
+	tt := models.TicketType{
+		EventID:     eventID,
+		Name:        "Regular",
+		IsPaid:      isPaid,
+		Price:       price,
+		MaxCapacity: maxCapacity,
+		SoldCount:   0,
+		IsActive:    true,
+	}
+	if err := db.Create(&tt).Error; err != nil {
+		return nil, err
+	}
+	return &tt, nil
+}
+
 // CreateTestQuestion membuat satu entitas pertanyaan form dinamis yang dikaitkan dengan kegiatan tertentu.
 func CreateTestQuestion(db *gorm.DB, eventID uint, questionType, requirementType string) (*models.DynamicQuestion, error) {
 	q := models.DynamicQuestion{
