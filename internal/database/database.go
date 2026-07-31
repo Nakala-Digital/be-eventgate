@@ -35,5 +35,8 @@ func Migrate(db *gorm.DB) error {
 		&models.TicketType{},
 		&models.DynamicQuestion{},
 		&models.QuestionOption{},
+		&models.Participant{},
+		&models.Registration{},
+		&models.FormResponse{},
 	)
 }

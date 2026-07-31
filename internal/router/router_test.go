@@ -328,3 +328,76 @@ func TestRouter_DynamicQuestionWorkflow(t *testing.T) {
 	}
 }
 
+// TestRouter_PublicRegistrationWorkflow menguji EVG-49 end-to-end lewat HTTP
+// nyata TANPA header Authorization sama sekali — memverifikasi subtree
+// /api/public/* benar-benar bisa diakses tanpa token (peserta tidak punya
+// akun/login).
+func TestRouter_PublicRegistrationWorkflow(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+
+	organizer, err := testutil.CreateTestUser(db, "panitia_pub_e2e", "panitia_pub_e2e@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+	if err != nil {
+		t.Fatalf("failed to create admin_panitia test user: %v", err)
+	}
+	event, err := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPublished)
+	if err != nil {
+		t.Fatalf("failed to create test event: %v", err)
+	}
+	if _, err := testutil.CreateTestTicketTypeWithOptions(db, event.ID, false, 0, 10); err != nil {
+		t.Fatalf("failed to create ticket type: %v", err)
+	}
+
+	r := router.New(db, "test-secret", 24)
+	server := httptest.NewServer(r)
+	defer server.Close()
+
+	// 1. Lihat ticket types TANPA token
+	ttResp, err := http.Get(fmt.Sprintf("%s/api/public/events/%d/ticket-types", server.URL, event.ID))
+	if err != nil {
+		t.Fatalf("ticket-types request error: %v", err)
+	}
+	if ttResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for public ticket-types (no auth), got %d", ttResp.StatusCode)
+	}
+	var ticketTypes []struct {
+		ID uint `json:"id"`
+	}
+	_ = json.NewDecoder(ttResp.Body).Decode(&ticketTypes)
+	if len(ticketTypes) != 1 {
+		t.Fatalf("expected 1 ticket type, got %d", len(ticketTypes))
+	}
+
+	// 2. Daftar TANPA token
+	registerBody, _ := json.Marshal(map[string]interface{}{
+		"participant": map[string]string{
+			"name":  "Peserta Tanpa Akun",
+			"email": "peserta_e2e@example.com",
+		},
+		"ticket_type_id": ticketTypes[0].ID,
+	})
+	registerResp, err := http.Post(fmt.Sprintf("%s/api/public/events/%d/register", server.URL, event.ID), "application/json", bytes.NewReader(registerBody))
+	if err != nil {
+		t.Fatalf("register request error: %v", err)
+	}
+	if registerResp.StatusCode != http.StatusCreated {
+		body, _ := json.Marshal(registerResp)
+		t.Fatalf("expected 201 registering without token, got %d (%v)", registerResp.StatusCode, string(body))
+	}
+	var registered struct {
+		RegistrationCode string `json:"registration_code"`
+		Status           string `json:"status"`
+	}
+	_ = json.NewDecoder(registerResp.Body).Decode(&registered)
+	if registered.Status != models.RegistrationStatusConfirmed {
+		t.Fatalf("expected status confirmed for free ticket, got %s", registered.Status)
+	}
+
+	// 3. Cek detail registrasi lewat registration_code, TANPA token
+	getResp, err := http.Get(fmt.Sprintf("%s/api/public/registrations/%s", server.URL, registered.RegistrationCode))
+	if err != nil {
+		t.Fatalf("get registration request error: %v", err)
+	}
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 fetching registration by code without token, got %d", getResp.StatusCode)
+	}
+}

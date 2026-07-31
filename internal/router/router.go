@@ -23,10 +23,21 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	userHandler := handlers.NewUserHandler(db)
 	eventHandler := handlers.NewEventHandler(db)
 	questionHandler := handlers.NewQuestionHandler(db)
+	registrationHandler := handlers.NewRegistrationHandler(db)
 
 	registerAPIRoutes := func(r chi.Router) {
 		// Rute Publik (Tanpa Autentikasi)
 		r.Post("/auth/login", authHandler.Login)
+
+		// Implementasi EVG-49: Public Participant Registration API.
+		// Rute di bawah subtree `/api/public` disediakan khusus untuk entitas publik (tanpa akun).
+		// Area ini sengaja mengecualikan middleware `RequireAuth` agar dapat diakses tanpa token.
+		r.Route("/public", func(r chi.Router) {
+			r.Get("/events/{id}/ticket-types", registrationHandler.ListPublicTicketTypes)
+			r.Get("/events/{id}/questions", registrationHandler.ListPublicQuestions)
+			r.Post("/events/{id}/register", registrationHandler.Register)
+			r.Get("/registrations/{code}", registrationHandler.GetByCode)
+		})
 
 		// Rute Terproteksi (Memerlukan JWT Token)
 		r.Group(func(r chi.Router) {
