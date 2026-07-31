@@ -220,13 +220,13 @@ func TestEventHandler_CRUD(t *testing.T) {
 			t.Fatalf("expected at least 2 events in list, got %d", len(list))
 		}
 
-		// Detail
+		// Detail (Staf Lapangan tidak bisa akses GetByID)
 		reqDetail := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/events/%d", event1ID), nil)
 		reqDetail.Header.Set("Authorization", "Bearer "+tokenStaf)
 		wDetail := httptest.NewRecorder()
 		r.ServeHTTP(wDetail, reqDetail)
-		if wDetail.Code != http.StatusOK {
-			t.Fatalf("expected 200 OK for detail event, got %d", wDetail.Code)
+		if wDetail.Code != http.StatusForbidden {
+			t.Fatalf("expected 403 Forbidden for staf detail event, got %d", wDetail.Code)
 		}
 	})
 
