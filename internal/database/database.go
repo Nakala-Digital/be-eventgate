@@ -27,5 +27,5 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 // Fungsionalitas ini dapat disesuaikan apabila proyek telah menggunakan
 // sistem migrasi berbasis SQL secara terpisah.
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(&models.Role{}, &models.User{})
+	return db.AutoMigrate(&models.Role{}, &models.User{}, &models.Event{})
 }

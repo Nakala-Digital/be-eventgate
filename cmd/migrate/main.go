@@ -34,10 +34,12 @@ func main() {
 		migrationFiles = []string{
 			filepath.Join("migrations", "000001_create_initial_schema.up.sql"),
 			filepath.Join("migrations", "000002_seed_initial_roles.up.sql"),
+			filepath.Join("migrations", "000003_add_event_pricing_quota.up.sql"),
 		}
 		log.Println("Starting database migration UP...")
 	} else if *cmd == "down" {
 		migrationFiles = []string{
+			filepath.Join("migrations", "000003_add_event_pricing_quota.down.sql"),
 			filepath.Join("migrations", "000002_seed_initial_roles.down.sql"),
 			filepath.Join("migrations", "000001_create_initial_schema.down.sql"),
 		}
