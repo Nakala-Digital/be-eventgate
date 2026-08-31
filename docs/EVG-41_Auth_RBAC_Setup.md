@@ -80,21 +80,29 @@ Mengautentikasi pengguna dan mengembalikan JWT Token.
 **Success Response (200 OK):**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": 2,
-    "username": "panitia",
-    "email": "panitia@eventgate.com",
-    "role_name": "admin_panitia",
-    "is_active": true
-  }
+  "success": true,
+  "message": "request completed successfully",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "user": {
+      "id": 2,
+      "username": "panitia",
+      "email": "panitia@eventgate.com",
+      "role_name": "admin_panitia",
+      "is_active": true
+    }
+  },
+  "errors": null
 }
 ```
 
 **Error Response (401 Unauthorized):**
 ```json
 {
-  "error": "invalid email or password"
+  "success": false,
+  "message": "invalid email or password",
+  "data": null,
+  "errors": null
 }
 ```
 *(Catatan: Akun yang dinonaktifkan akan menerima pesan galat khusus).*
@@ -109,11 +117,16 @@ Mendapatkan profil pengguna yang sedang aktif (direkomendasikan untuk *refresh s
 **Success Response (200 OK):**
 ```json
 {
-  "id": 2,
-  "username": "panitia",
-  "email": "panitia@eventgate.com",
-  "role_name": "admin_panitia",
-  "is_active": true
+  "success": true,
+  "message": "request completed successfully",
+  "data": {
+    "id": 2,
+    "username": "panitia",
+    "email": "panitia@eventgate.com",
+    "role_name": "admin_panitia",
+    "is_active": true
+  },
+  "errors": null
 }
 ```
 

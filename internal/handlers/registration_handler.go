@@ -163,7 +163,7 @@ func answerMatchesValue(raw json.RawMessage, value string) bool {
 	return false
 }
 
-// validateOptionAnswer memvalidasi input jawaban untuk tipe dropdown, radio, dan checkbox
+// validateOptionAnswer memvalidasi input jawaban untuk tipe select, radio, dan checkbox
 // untuk memastikan bahwa nilai yang dikirimkan terdaftar dalam opsi yang valid.
 func validateOptionAnswer(q models.DynamicQuestion, raw json.RawMessage) error {
 	validValues := make(map[string]bool, len(q.Options))
@@ -308,7 +308,7 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status := models.RegistrationStatusWaitingPayment
+	status := models.RegistrationStatusPendingPayment
 	var confirmedAt *time.Time
 	if !ticketType.IsPaid {
 		status = models.RegistrationStatusConfirmed

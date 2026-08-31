@@ -63,7 +63,7 @@ Panduan bagi tim Frontend untuk mengimplementasikan form registrasi dinamis:
 * Untuk `requirement_type` bernilai `kondisional`, aplikasi di sisi klien (frontend) harus menyembunyikan pertanyaan tersebut secara *default*. Tampilkan input pertanyaan ini secara dinamis **hanya jika** pengguna telah menjawab pertanyaan pada ID `depends_on_question_id` dengan jawaban yang identik dengan nilai `depends_on_value`.
 
 ### B. Penggunaan `options`
-* Jika `question_type = dropdown`, `radio`, atau `checkbox` → Frontend **wajib** menggunakan array `options` untuk menyajikan pilihan jawaban.
+* Jika `question_type = select`, `radio`, atau `checkbox` → Frontend **wajib** menggunakan array `options` untuk menyajikan pilihan jawaban.
 * Selain tipe tersebut → field `options` dapat diabaikan.
 
 ### C. Pengelolaan Data Options (Replace-All Strategy)
@@ -85,8 +85,7 @@ be-eventgate/
 ├── docs/
 │   └── EVG-47_Dynamic_Form_Schema_API.md          # Dokumen ini
 ├── migrations/
-│   ├── 000005_update_question_type_options.up.sql # Modifikasi CHECK constraint
-│   └── 000005_update_question_type_options.down.sql
+│   └── 000001_create_initial_schema.up.sql         # ERD enum/check constraints
 ├── internal/
 │   ├── handlers/
 │   │   ├── question_dto.go                        # Tipe Request/Response baru
@@ -112,9 +111,11 @@ be-eventgate/
 * **EVG-34 – ERD** menggunakan enum database: `text, textarea, number, date, select, radio, checkbox` serta menyatakan `file_upload` sebagai **future enhancement/out of scope**.
 
 **Implementasi**
-Implementasi ini mengikuti task requirement yang menggunakan istilah `dropdown` dan `file_upload`. Oleh karena itu enum `question_type` pada migration disesuaikan menjadi `text`, `textarea`, `number`, `date`, `dropdown`, `radio`, `checkbox`, dan `file_upload`. Perubahan ini diikuti dengan penyesuaian CHECK constraint pada PostgreSQL agar menerima nilai tersebut.
+ERD menjadi sumber kebenaran untuk kontrak backend. Nilai `question_type` yang diterima adalah `text`, `textarea`, `number`, `date`, `select`, `radio`, dan `checkbox`. Istilah `dropdown` pada dokumen kebutuhan dipetakan ke `select`; `file_upload` tetap berada di luar scope karena tidak tersedia pada ERD.
 
-> **Catatan:** Terdapat perbedaan terminologi antara Task Brief dan ERD terkait `question_type`. Implementasi pada task ini mengikuti spesifikasi yang digunakan selama pengembangan. Dokumentasi sebaiknya disinkronkan pada revisi berikutnya agar requirement, ERD, dan implementasi menggunakan definisi yang konsisten.
+Migration tambahan yang sebelumnya mengubah enum telah dihapus sehingga CHECK constraint dari migration awal tetap menjadi acuan.
+
+Seluruh respons endpoint mengikuti JSON envelope standar: `success`, `message`, `data`, dan `errors`.
 
 ### B. Dukungan Conditional Question
 

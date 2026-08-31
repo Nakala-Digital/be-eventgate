@@ -34,10 +34,7 @@ func TestLogin_Success(t *testing.T) {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
 
-	var resp handlers.LoginResponse
-	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
+	resp := testutil.DecodeData[handlers.LoginResponse](t, rr.Body.Bytes())
 	if resp.Token == "" {
 		t.Fatal("expected a non-empty token in the login response")
 	}

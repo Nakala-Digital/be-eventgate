@@ -26,10 +26,9 @@ func createAuthToken(t *testing.T, r http.Handler, email, password string) strin
 		t.Fatalf("login failed with status %d: %s", w.Code, w.Body.String())
 	}
 
-	var res struct {
+	res := testutil.DecodeData[struct {
 		Token string `json:"token"`
-	}
-	_ = json.Unmarshal(w.Body.Bytes(), &res)
+	}](t, w.Body.Bytes())
 	return res.Token
 }
 
@@ -170,8 +169,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 			t.Fatalf("expected 201 Created for panitia1, got %d: %s", w1.Code, w1.Body.String())
 		}
 
-		var createdEvent models.Event
-		_ = json.Unmarshal(w1.Body.Bytes(), &createdEvent)
+		createdEvent := testutil.DecodeData[models.Event](t, w1.Body.Bytes())
 		if createdEvent.ID == 0 || createdEvent.Title != "Go Workshop 2026" {
 			t.Fatalf("unexpected event response: %+v", createdEvent)
 		}
@@ -214,8 +212,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 		if wList.Code != http.StatusOK {
 			t.Fatalf("expected 200 OK for list events, got %d", wList.Code)
 		}
-		var list []models.Event
-		_ = json.Unmarshal(wList.Body.Bytes(), &list)
+		list := testutil.DecodeData[[]models.Event](t, wList.Body.Bytes())
 		if len(list) < 2 {
 			t.Fatalf("expected at least 2 events in list, got %d", len(list))
 		}

@@ -3,29 +3,27 @@ package models
 import "time"
 
 // Tipe field pertanyaan (question_type).
-// Tipe field pertanyaan (question_type).
 // Nilai ini harus selaras dengan batasan validasi pada basis data.
 const (
-	QuestionTypeText       = "text"
-	QuestionTypeTextarea   = "textarea"
-	QuestionTypeNumber     = "number"
-	QuestionTypeDate       = "date"
-	QuestionTypeDropdown   = "dropdown"
-	QuestionTypeRadio      = "radio"
-	QuestionTypeCheckbox   = "checkbox"
-	QuestionTypeFileUpload = "file_upload"
+	QuestionTypeText     = "text"
+	QuestionTypeTextarea = "textarea"
+	QuestionTypeNumber   = "number"
+	QuestionTypeDate     = "date"
+	QuestionTypeSelect   = "select"
+	QuestionTypeRadio    = "radio"
+	QuestionTypeCheckbox = "checkbox"
 )
 
 // ValidQuestionTypes memuat daftar seluruh tipe pertanyaan yang diizinkan.
 var ValidQuestionTypes = []string{
 	QuestionTypeText, QuestionTypeTextarea, QuestionTypeNumber, QuestionTypeDate,
-	QuestionTypeDropdown, QuestionTypeRadio, QuestionTypeCheckbox, QuestionTypeFileUpload,
+	QuestionTypeSelect, QuestionTypeRadio, QuestionTypeCheckbox,
 }
 
 // OptionSupportingQuestionTypes mendaftar tipe pertanyaan yang memerlukan
-// opsi tambahan secara fungsional, seperti dropdown, radio, dan checkbox.
+// opsi tambahan secara fungsional, seperti select, radio, dan checkbox.
 var OptionSupportingQuestionTypes = map[string]bool{
-	QuestionTypeDropdown: true,
+	QuestionTypeSelect:   true,
 	QuestionTypeRadio:    true,
 	QuestionTypeCheckbox: true,
 }

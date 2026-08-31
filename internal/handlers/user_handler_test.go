@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,10 +38,7 @@ func TestMe_Success(t *testing.T) {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
 
-	var profile handlers.UserProfile
-	if err := json.Unmarshal(rr.Body.Bytes(), &profile); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
+	profile := testutil.DecodeData[handlers.UserProfile](t, rr.Body.Bytes())
 	if profile.Username != "superadmin1" {
 		t.Errorf("expected username superadmin1, got %s", profile.Username)
 	}

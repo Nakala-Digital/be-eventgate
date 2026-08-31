@@ -2,12 +2,11 @@ package models
 
 import "time"
 
-// Konstanta berikut merepresentasikan status registrasi peserta.
-// Status `waiting_payment` digunakan secara konsisten dalam aplikasi
-// dan telah disinkronkan dengan skema basis data melalui migrasi khusus.
+// Konstanta berikut merepresentasikan status registrasi peserta dan harus
+// selaras dengan CHECK constraint pada skema basis data.
 const (
 	RegistrationStatusPending        = "pending"
-	RegistrationStatusWaitingPayment = "waiting_payment"
+	RegistrationStatusPendingPayment = "pending_payment"
 	RegistrationStatusConfirmed      = "confirmed"
 	RegistrationStatusCancelled      = "cancelled"
 )

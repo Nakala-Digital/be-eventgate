@@ -65,7 +65,7 @@ Panduan bagi tim Frontend untuk mengimplementasikan form registrasi dinamis:
 * Form tidak boleh diizinkan untuk di-submit apabila ticket-types yang dipilih sudah *sold out*.
 
 ### B. Validasi Dynamic Form di Klien
-* Backend telah menangani validasi *conditional requirement* dan *dropdown validation*. Namun, disarankan agar aplikasi klien juga menaati aturan tersebut untuk User Experience (UX) yang lebih responsif.
+* Backend telah menangani validasi *conditional requirement* dan *select validation*. Namun, disarankan agar aplikasi klien juga menaati aturan tersebut untuk User Experience (UX) yang lebih responsif.
 * Jika `requirement_type = kondisional`, elemen form tersebut wajib diisi hanya jika pertanyaan `depends_on_question_id` dijawab sesuai dengan nilai `depends_on_value`.
 
 ### C. Post-Registration
@@ -79,7 +79,8 @@ Panduan bagi tim Frontend untuk mengimplementasikan form registrasi dinamis:
 * **Transactional Atomicity (ACID):** Pembuatan partisipan baru (atau update partisipan lama), pembaruan kuota tiket, dan penyisipan Form Responses dijalankan di dalam **satu transaksi database**. Hal ini mengamankan integritas data dari isu separuh data tersimpan apabila terjadi _failure_ di tengah proses.
 * **Concurrency Handling untuk Kuota Tiket:** Pembaruan kapasitas tiket dilakukan menggunakan mekanisme *atomic in-place update* (`UpdateColumn("sold_count", gorm.Expr("sold_count + 1"))` dilengkapi pengecekan klausa WHERE untuk mematuhi *max_capacity*). Hal ini mencegah terjadinya *overselling* saat banyak permintaan registrasi masuk secara konkuren (Race Conditions).
 * **Idempotency Peserta:** Kombinasi unik `(email, name)` digunakan untuk melakukan resolusi `Participant`. Jika sebuah email & nama sudah pernah terdaftar di database (misal dari event sebelumnya), sistem menggunakan kembali `participant_id` yang ada (*reuse*) daripada menciptakan *redundant data*.
-* **Status Approval Registrasi:** Sesuai task brief, tiket berbayar secara otomatis mendapatkan status `waiting_payment`, dan tiket gratis langsung `confirmed`.
+* **Status Approval Registrasi:** Tiket berbayar secara otomatis mendapatkan status `pending_payment` sesuai ERD, dan tiket gratis langsung `confirmed`.
+* **JSON Envelope:** Seluruh respons menggunakan field `success`, `message`, `data`, dan `errors`. Payload endpoint berada di dalam `data`.
 
 ---
 
@@ -120,7 +121,7 @@ Pada saat *fetching* registrasi dengan `Preload("Participant")`, GORM sempat men
 
 ### C. Penyesuaian Requirement dan Penanganan Edge Cases
 Terdapat beberapa keputusan teknis tambahan yang diimplementasikan untuk melengkapi *task brief* awal:
-1. **Sinkronisasi Status Pembayaran:** Terdapat perbedaan antara status `waiting_payment` (yang diminta pada *task brief*) dengan nama asli di *CHECK constraint* basis data (yaitu `pending_payment`). Untuk mengatasi hal ini, sebuah skrip migrasi baru (`migrations/000006_rename_pending_payment_status`) telah ditambahkan untuk mengubah nilai valid *constraint* menjadi `waiting_payment` agar selaras secara keseluruhan.
+1. **Sinkronisasi Status Pembayaran:** ERD dan migration awal menetapkan `pending_payment`. Migration tambahan yang sebelumnya mengubahnya menjadi `waiting_payment` dihapus agar backend, frontend, dan database menggunakan nilai yang sama.
 2. **Ketersediaan Endpoint Prasyarat:** Karena *payload* registrasi mewajibkan peserta untuk mengirimkan `ticket_type_id` dan jawaban dinamis, maka ditambahkan dua endpoint publik minimal sebagai prasyarat: `GET /api/public/events/{id}/ticket-types` dan `GET /api/public/events/{id}/questions`. Tanpa kedua endpoint ini, aplikasi frontend klien (yang *notabene* tidak memiliki akses *auth*) tidak akan memiliki cara untuk mengetahui tiket apa saja yang tersedia untuk dipilih.
 3. **Pembatasan Registrasi Ganda (Duplikasi Entri):** Untuk mencegah satu peserta (berdasarkan validasi email) mendaftar berkali-kali pada event yang sama secara tidak wajar, diterapkan sebuah mekanisme *blocking*. Sistem memvalidasi bahwa 1 email hanya diperbolehkan memiliki 1 registrasi aktif per event (dengan status selain *cancelled*).
 

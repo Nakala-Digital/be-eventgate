@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"be-eventgate/internal/handlers"
+	"be-eventgate/internal/httpx"
 	appmw "be-eventgate/internal/middleware"
 	"be-eventgate/internal/models"
 )
@@ -18,6 +19,12 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		httpx.WriteError(w, http.StatusNotFound, "route not found")
+	})
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+	})
 
 	authHandler := handlers.NewAuthHandler(db, jwtSecret, jwtExpiryHrs)
 	userHandler := handlers.NewUserHandler(db)
@@ -96,9 +103,7 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(appmw.RequireRole(models.RoleSuperAdmin))
 				r.Get("/admin/ping", func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{"message":"pong, you are super_admin"}`))
+					httpx.WriteJSON(w, http.StatusOK, map[string]string{"message": "pong, you are super_admin"})
 				})
 			})
 		})

@@ -78,7 +78,7 @@ func (h *QuestionHandler) validateQuestionRequest(eventID uint, req QuestionRequ
 		return "question_text is required", http.StatusBadRequest, ""
 	}
 	if req.QuestionType == "" || !isValidQuestionType(req.QuestionType) {
-		return "question_type is required and must be one of: text, textarea, number, date, dropdown, radio, checkbox, file_upload", http.StatusBadRequest, ""
+		return "question_type is required and must be one of: text, textarea, number, date, select, radio, checkbox", http.StatusBadRequest, ""
 	}
 
 	requirementType := req.RequirementType
@@ -106,10 +106,10 @@ func (h *QuestionHandler) validateQuestionRequest(eventID uint, req QuestionRequ
 	}
 
 	if len(req.Options) > 0 && !models.OptionSupportingQuestionTypes[req.QuestionType] {
-		return "options can only be set for question_type: dropdown, radio, checkbox", http.StatusBadRequest, ""
+		return "options can only be set for question_type: select, radio, checkbox", http.StatusBadRequest, ""
 	}
 	if models.OptionSupportingQuestionTypes[req.QuestionType] && len(req.Options) == 0 {
-		return "at least one option is required for question_type: dropdown, radio, checkbox", http.StatusBadRequest, ""
+		return "at least one option is required for question_type: select, radio, checkbox", http.StatusBadRequest, ""
 	}
 	for _, o := range req.Options {
 		if o.OptionLabel == "" || o.OptionValue == "" {

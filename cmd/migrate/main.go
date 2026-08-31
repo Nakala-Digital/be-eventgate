@@ -36,14 +36,10 @@ func main() {
 			filepath.Join("migrations", "000002_seed_initial_roles.up.sql"),
 			filepath.Join("migrations", "000003_add_event_pricing_quota.up.sql"),
 			filepath.Join("migrations", "000004_add_event_version_to_events.up.sql"),
-			filepath.Join("migrations", "000005_update_question_type_options.up.sql"),
-			filepath.Join("migrations", "000006_rename_pending_payment_status.up.sql"),
 		}
 		log.Println("Starting database migration UP...")
 	} else if *cmd == "down" {
 		migrationFiles = []string{
-			filepath.Join("migrations", "000006_rename_pending_payment_status.down.sql"),
-			filepath.Join("migrations", "000005_update_question_type_options.down.sql"),
 			filepath.Join("migrations", "000004_add_event_version_to_events.down.sql"),
 			filepath.Join("migrations", "000003_add_event_pricing_quota.down.sql"),
 			filepath.Join("migrations", "000002_seed_initial_roles.down.sql"),

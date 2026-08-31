@@ -5,6 +5,8 @@
 package testutil
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -18,6 +20,51 @@ import (
 	"be-eventgate/internal/database"
 	"be-eventgate/internal/models"
 )
+
+// ResponseEnvelope merepresentasikan kontrak respons JSON seluruh endpoint.
+type ResponseEnvelope struct {
+	Success bool            `json:"success"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+	Errors  json.RawMessage `json:"errors"`
+}
+
+// DecodeEnvelope memvalidasi keberadaan semua field envelope dan mengembalikan
+// isi respons untuk dipakai oleh pengujian endpoint.
+func DecodeEnvelope(t *testing.T, body []byte) ResponseEnvelope {
+	t.Helper()
+
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(body, &fields); err != nil {
+		t.Fatalf("failed to decode JSON envelope: %v; body: %s", err, body)
+	}
+	for _, field := range []string{"success", "message", "data", "errors"} {
+		if _, ok := fields[field]; !ok {
+			t.Fatalf("JSON envelope is missing %q; body: %s", field, body)
+		}
+	}
+
+	var envelope ResponseEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		t.Fatalf("failed to decode response envelope: %v; body: %s", err, body)
+	}
+	return envelope
+}
+
+// DecodeData mengambil payload dari field data pada JSON envelope.
+func DecodeData[T any](t *testing.T, body []byte) T {
+	t.Helper()
+	envelope := DecodeEnvelope(t, body)
+
+	var data T
+	if len(envelope.Data) == 0 || bytes.Equal(bytes.TrimSpace(envelope.Data), []byte("null")) {
+		return data
+	}
+	if err := json.Unmarshal(envelope.Data, &data); err != nil {
+		t.Fatalf("failed to decode response data: %v; data: %s", err, envelope.Data)
+	}
+	return data
+}
 
 // MustSetupDB membuat instance SQLite in-memory yang unik per test (supaya
 // antar test tidak saling mengganggu), sudah dimigrasi, dan sudah di-seed
