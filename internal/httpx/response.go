@@ -1,23 +1,26 @@
 package httpx
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"be-eventgate/pkg/utils/response"
 )
 
-// ErrorResponse mendefinisikan struktur JSON baku untuk respons kesalahan API.
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
+// Response merepresentasikan struktur JSON baku untuk respons API.
+type Response = response.Response
 
-// WriteJSON menyusun dan mengirimkan payload respons HTTP dalam format JSON.
+// WriteJSON menyusun dan mengirimkan payload respons HTTP sukses dalam format JSON terstandarisasi envelope {success, message, data}.
 func WriteJSON(w http.ResponseWriter, status int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	response.Success(w, status, "success", payload)
 }
 
-// WriteError mengirimkan respons kesalahan HTTP menggunakan format ErrorResponse.
-func WriteError(w http.ResponseWriter, status int, message string) {
-	WriteJSON(w, status, ErrorResponse{Error: message})
+// WriteSuccess menyusun dan mengirimkan respons HTTP sukses dengan pesan deskriptif dan payload.
+func WriteSuccess(w http.ResponseWriter, status int, message string, payload interface{}) {
+	response.Success(w, status, message, payload)
 }
+
+// WriteError mengirimkan respons kesalahan HTTP menggunakan format envelope {success: false, message: message}.
+func WriteError(w http.ResponseWriter, status int, message string) {
+	response.Error(w, status, message, nil)
+}
+

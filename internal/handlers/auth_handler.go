@@ -78,7 +78,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	h.DB.Model(&user).Update("last_login_at", now)
 
-	httpx.WriteJSON(w, http.StatusOK, LoginResponse{
+	httpx.WriteSuccess(w, http.StatusOK, "login successful", LoginResponse{
 		Token: token,
 		User:  toUserProfile(user),
 	})
