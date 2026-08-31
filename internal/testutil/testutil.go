@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -67,4 +68,77 @@ func CreateTestUser(db *gorm.DB, username, email, plainPassword, roleName string
 	}
 	user.Role = role
 	return &user, nil
+}
+
+func CreateTestEvent(db *gorm.DB, organizerID uint, status string) (*models.Event, error) {
+	now := time.Now()
+	event := models.Event{
+		OrganizerID: organizerID,
+		Title:       fmt.Sprintf("Test Event %d", now.UnixNano()),
+		Description: "Test Description",
+		Banner:      "http://example.com/banner.jpg",
+		Location:    "Test Location",
+		Slug:        fmt.Sprintf("test-event-%d", now.UnixNano()),
+		StartTime:   now.Add(24 * time.Hour),
+		EndTime:     now.Add(48 * time.Hour),
+		IsPaid:      false,
+		Price:       0,
+		Quota:       100,
+		Status:      status,
+		CreatedByID: organizerID,
+	}
+	if err := db.Create(&event).Error; err != nil {
+		return nil, err
+	}
+	return &event, nil
+}
+
+func CreateTestTicketType(db *gorm.DB, eventID uint) (*models.TicketType, error) {
+	tt := models.TicketType{
+		EventID:     eventID,
+		Name:        "Regular",
+		IsPaid:      false,
+		Price:       0,
+		MaxCapacity: 100,
+		SoldCount:   0,
+		IsActive:    true,
+	}
+	if err := db.Create(&tt).Error; err != nil {
+		return nil, err
+	}
+	return &tt, nil
+}
+
+// CreateTestTicketTypeWithOptions sama seperti CreateTestTicketType tapi
+// dengan kontrol penuh atas IsPaid/Price/MaxCapacity.
+func CreateTestTicketTypeWithOptions(db *gorm.DB, eventID uint, isPaid bool, price float64, maxCapacity int) (*models.TicketType, error) {
+	tt := models.TicketType{
+		EventID:     eventID,
+		Name:        "Regular",
+		IsPaid:      isPaid,
+		Price:       price,
+		MaxCapacity: maxCapacity,
+		SoldCount:   0,
+		IsActive:    true,
+	}
+	if err := db.Create(&tt).Error; err != nil {
+		return nil, err
+	}
+	return &tt, nil
+}
+
+// CreateTestQuestion membuat satu entitas pertanyaan form dinamis yang dikaitkan dengan kegiatan tertentu.
+func CreateTestQuestion(db *gorm.DB, eventID uint, questionType, requirementType string) (*models.DynamicQuestion, error) {
+	q := models.DynamicQuestion{
+		EventID:         eventID,
+		QuestionText:    "Test Question",
+		QuestionType:    questionType,
+		RequirementType: requirementType,
+		DisplayOrder:    0,
+		IsActive:        true,
+	}
+	if err := db.Create(&q).Error; err != nil {
+		return nil, err
+	}
+	return &q, nil
 }

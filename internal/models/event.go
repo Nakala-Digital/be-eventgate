@@ -34,6 +34,10 @@ type Event struct {
 	Price       float64        `gorm:"column:price;type:numeric(12,2);not null;default:0" json:"price"`
 	Quota       int            `gorm:"column:quota;not null;default:0" json:"quota"`
 	Status      string         `gorm:"column:status;size:50;not null;default:'draft'" json:"status"`
+	EventVersion int        `gorm:"column:event_version;not null" json:"event_version"`
+	PublishedAt  *time.Time `gorm:"column:published_at" json:"published_at,omitempty"`
+	CancelledAt  *time.Time `gorm:"column:cancelled_at" json:"cancelled_at,omitempty"`
+	CompletedAt  *time.Time `gorm:"column:completed_at" json:"completed_at,omitempty"`
 	CreatedByID uint           `gorm:"column:created_by;not null;index" json:"created_by"`
 	CreatedBy   User           `gorm:"foreignKey:CreatedByID" json:"created_by_user,omitempty"`
 	UpdatedByID *uint          `gorm:"column:updated_by" json:"updated_by,omitempty"`
