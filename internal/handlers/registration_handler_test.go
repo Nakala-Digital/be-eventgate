@@ -52,8 +52,7 @@ func TestListPublicTicketTypes_PublishedEvent_Success(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp []handlers.PublicTicketTypeResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[[]handlers.PublicTicketTypeResponse](t, rr.Body.Bytes())
 	if len(resp) != 1 {
 		t.Fatalf("expected 1 ticket type, got %d", len(resp))
 	}
@@ -100,8 +99,7 @@ func TestListPublicQuestions_OnlyActiveShown(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
-	var resp []handlers.QuestionResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[[]handlers.QuestionResponse](t, rr.Body.Bytes())
 	if len(resp) != 1 {
 		t.Fatalf("expected 1 active question (inactive one excluded), got %d", len(resp))
 	}
@@ -126,8 +124,7 @@ func TestRegister_FreeTicket_ConfirmsImmediately(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp handlers.RegistrationResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[handlers.RegistrationResponse](t, rr.Body.Bytes())
 	if resp.Status != models.RegistrationStatusConfirmed {
 		t.Errorf("expected status confirmed for a free ticket, got %s", resp.Status)
 	}
@@ -136,7 +133,7 @@ func TestRegister_FreeTicket_ConfirmsImmediately(t *testing.T) {
 	}
 }
 
-func TestRegister_PaidTicket_WaitingPayment(t *testing.T) {
+func TestRegister_PaidTicket_PendingPayment(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_r5", "panitia_r5@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPublished)
@@ -153,10 +150,9 @@ func TestRegister_PaidTicket_WaitingPayment(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp handlers.RegistrationResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
-	if resp.Status != models.RegistrationStatusWaitingPayment {
-		t.Errorf("expected status waiting_payment for a paid ticket, got %s", resp.Status)
+	resp := testutil.DecodeData[handlers.RegistrationResponse](t, rr.Body.Bytes())
+	if resp.Status != models.RegistrationStatusPendingPayment {
+		t.Errorf("expected status pending_payment for a paid ticket, got %s", resp.Status)
 	}
 }
 
@@ -306,12 +302,12 @@ func TestRegister_WithAnswers_Success(t *testing.T) {
 	}
 }
 
-func TestRegister_InvalidDropdownAnswer_Fails(t *testing.T) {
+func TestRegister_InvalidSelectAnswer_Fails(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_r12", "panitia_r12@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPublished)
 	ticketType, _ := testutil.CreateTestTicketTypeWithOptions(db, event.ID, false, 0, 100)
-	question, _ := testutil.CreateTestQuestion(db, event.ID, models.QuestionTypeDropdown, models.RequirementTypeOpsional)
+	question, _ := testutil.CreateTestQuestion(db, event.ID, models.QuestionTypeSelect, models.RequirementTypeOpsional)
 	db.Create(&models.QuestionOption{QuestionID: question.ID, OptionLabel: "S", OptionValue: "S", IsActive: true})
 	db.Create(&models.QuestionOption{QuestionID: question.ID, OptionLabel: "M", OptionValue: "M", IsActive: true})
 
@@ -330,7 +326,7 @@ func TestRegister_InvalidDropdownAnswer_Fails(t *testing.T) {
 	h.Register(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for an answer that isn't a valid dropdown option, got %d", rr.Code)
+		t.Fatalf("expected 400 for an answer that isn't a valid select option, got %d", rr.Code)
 	}
 }
 
@@ -457,8 +453,7 @@ func TestGetByCode_Success(t *testing.T) {
 	regReq = withChiParam(regReq, "id", fmt.Sprintf("%d", event.ID))
 	regRR := httptest.NewRecorder()
 	h.Register(regRR, regReq)
-	var created handlers.RegistrationResponse
-	_ = json.Unmarshal(regRR.Body.Bytes(), &created)
+	created := testutil.DecodeData[handlers.RegistrationResponse](t, regRR.Body.Bytes())
 
 	getReq := newPublicRequest(http.MethodGet, fmt.Sprintf("/api/public/registrations/%s", created.RegistrationCode), nil)
 	getReq = withChiParam(getReq, "code", created.RegistrationCode)
@@ -468,8 +463,7 @@ func TestGetByCode_Success(t *testing.T) {
 	if getRR.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d, body: %s", getRR.Code, getRR.Body.String())
 	}
-	var resp handlers.RegistrationResponse
-	_ = json.Unmarshal(getRR.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[handlers.RegistrationResponse](t, getRR.Body.Bytes())
 	if resp.RegistrationCode != created.RegistrationCode {
 		t.Errorf("expected registration_code %s, got %s", created.RegistrationCode, resp.RegistrationCode)
 	}

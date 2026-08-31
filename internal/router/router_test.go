@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,6 +31,15 @@ func doLogin(t *testing.T, baseURL, email, password string) (int, string) {
 	}
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	return resp.StatusCode, result.Data.Token
+}
+
+func decodeHTTPData[T any](t *testing.T, body io.Reader) T {
+	t.Helper()
+	raw, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("failed to read HTTP response: %v", err)
+	}
+	return testutil.DecodeData[T](t, raw)
 }
 
 // TestRouter_FullAuthFlow menguji seluruh acceptance criteria EVG-41 secara
@@ -161,10 +171,9 @@ func TestRouter_EventApprovalWorkflow(t *testing.T) {
 	if createResp.StatusCode != http.StatusCreated {
 		t.Fatalf("expected 201 creating event, got %d", createResp.StatusCode)
 	}
-	var created struct {
+	created := decodeHTTPData[struct {
 		ID uint `json:"id"`
-	}
-	_ = json.NewDecoder(createResp.Body).Decode(&created)
+	}](t, createResp.Body)
 
 	// 3. Admin Panitia mencoba publish -> harus 403 lewat middleware sungguhan
 	publishAsPanitiaReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/events/%d/publish", server.URL, created.ID), nil)
@@ -212,10 +221,9 @@ func TestRouter_EventApprovalWorkflow(t *testing.T) {
 	if publishResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 publishing event, got %d", publishResp.StatusCode)
 	}
-	var published struct {
+	published := decodeHTTPData[struct {
 		Status string `json:"status"`
-	}
-	_ = json.NewDecoder(publishResp.Body).Decode(&published)
+	}](t, publishResp.Body)
 	if published.Status != models.EventStatusPublished {
 		t.Fatalf("expected final status published, got %s", published.Status)
 	}
@@ -234,7 +242,7 @@ func TestRouter_EventApprovalWorkflow(t *testing.T) {
 
 // TestRouter_DynamicQuestionWorkflow menguji skenario EVG-47 secara end-to-end
 // melalui HTTP: Pembuatan kegiatan oleh Admin Panitia, penambahan pertanyaan
-// bertipe dropdown beserta opsinya, dan pengambilan skema formulir.
+// bertipe select beserta opsinya, dan pengambilan skema formulir.
 func TestRouter_DynamicQuestionWorkflow(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 
@@ -272,15 +280,14 @@ func TestRouter_DynamicQuestionWorkflow(t *testing.T) {
 	if createResp.StatusCode != http.StatusCreated {
 		t.Fatalf("expected 201 creating event, got %d", createResp.StatusCode)
 	}
-	var created struct {
+	created := decodeHTTPData[struct {
 		ID uint `json:"id"`
-	}
-	_ = json.NewDecoder(createResp.Body).Decode(&created)
+	}](t, createResp.Body)
 
-	// Pembuatan pertanyaan bertipe dropdown beserta opsi pendukungnya
+	// Pembuatan pertanyaan bertipe select beserta opsi pendukungnya
 	questionBody, _ := json.Marshal(map[string]interface{}{
 		"question_text": "Ukuran baju?",
-		"question_type": "dropdown",
+		"question_type": "select",
 		"options": []map[string]interface{}{
 			{"option_label": "S", "option_value": "S", "display_order": 1},
 			{"option_label": "M", "option_value": "M", "display_order": 2},
@@ -318,10 +325,9 @@ func TestRouter_DynamicQuestionWorkflow(t *testing.T) {
 	if getResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 listing questions, got %d", getResp.StatusCode)
 	}
-	var questions []struct {
+	questions := decodeHTTPData[[]struct {
 		Options []struct{} `json:"options"`
-	}
-	_ = json.NewDecoder(getResp.Body).Decode(&questions)
+	}](t, getResp.Body)
 	if len(questions) != 1 {
 		t.Fatalf("expected 1 question, got %d", len(questions))
 	}
@@ -361,10 +367,9 @@ func TestRouter_PublicRegistrationWorkflow(t *testing.T) {
 	if ttResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 for public ticket-types (no auth), got %d", ttResp.StatusCode)
 	}
-	var ticketTypes []struct {
+	ticketTypes := decodeHTTPData[[]struct {
 		ID uint `json:"id"`
-	}
-	_ = json.NewDecoder(ttResp.Body).Decode(&ticketTypes)
+	}](t, ttResp.Body)
 	if len(ticketTypes) != 1 {
 		t.Fatalf("expected 1 ticket type, got %d", len(ticketTypes))
 	}
@@ -385,11 +390,10 @@ func TestRouter_PublicRegistrationWorkflow(t *testing.T) {
 		body, _ := json.Marshal(registerResp)
 		t.Fatalf("expected 201 registering without token, got %d (%v)", registerResp.StatusCode, string(body))
 	}
-	var registered struct {
+	registered := decodeHTTPData[struct {
 		RegistrationCode string `json:"registration_code"`
 		Status           string `json:"status"`
-	}
-	_ = json.NewDecoder(registerResp.Body).Decode(&registered)
+	}](t, registerResp.Body)
 	if registered.Status != models.RegistrationStatusConfirmed {
 		t.Fatalf("expected status confirmed for free ticket, got %s", registered.Status)
 	}

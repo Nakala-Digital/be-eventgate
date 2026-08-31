@@ -68,26 +68,31 @@ Mengambil histori log persetujuan dari suatu acara (diurutkan kronologis).
 
 **Success Response (200 OK):**
 ```json
-[
-  {
-    "id": 1,
-    "event_id": 1,
-    "event_version": 1,
-    "action": "submitted",
-    "submitted_by": { "id": 1, "username": "John Doe", "email": "john@example.com" },
-    "submitted_at": "2026-07-25T10:00:00Z",
-    "notes": "Mohon ditinjau proposal kami"
-  },
-  {
-    "id": 2,
-    "event_id": 1,
-    "event_version": 1,
-    "action": "approved",
-    "reviewed_by": { "id": 2, "username": "Admin Kampus", "email": "admin@example.com" },
-    "reviewed_at": "2026-07-25T11:00:00Z",
-    "notes": "Sesuai kriteria"
-  }
-]
+{
+  "success": true,
+  "message": "request completed successfully",
+  "data": [
+    {
+      "id": 1,
+      "event_id": 1,
+      "event_version": 1,
+      "action": "submitted",
+      "submitted_by": { "id": 1, "username": "John Doe", "email": "john@example.com" },
+      "submitted_at": "2026-07-25T10:00:00Z",
+      "notes": "Mohon ditinjau proposal kami"
+    },
+    {
+      "id": 2,
+      "event_id": 1,
+      "event_version": 1,
+      "action": "approved",
+      "reviewed_by": { "id": 2, "username": "Admin Kampus", "email": "admin@example.com" },
+      "reviewed_at": "2026-07-25T11:00:00Z",
+      "notes": "Sesuai kriteria"
+    }
+  ],
+  "errors": null
+}
 ```
 
 ### 5.2. Submit Event For Approval

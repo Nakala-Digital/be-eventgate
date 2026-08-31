@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"be-eventgate/internal/handlers"
+	"be-eventgate/internal/httpx"
 	appmw "be-eventgate/internal/middleware"
 	"be-eventgate/internal/models"
 	"be-eventgate/pkg/utils/response"
@@ -19,6 +20,12 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		httpx.WriteError(w, http.StatusNotFound, "route not found")
+	})
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+	})
 
 	authHandler := handlers.NewAuthHandler(db, jwtSecret, jwtExpiryHrs)
 	userHandler := handlers.NewUserHandler(db)

@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -37,8 +36,7 @@ func TestCreateQuestion_Success_TextType(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp handlers.QuestionResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[handlers.QuestionResponse](t, rr.Body.Bytes())
 	if resp.RequirementType != models.RequirementTypeWajib {
 		t.Errorf("expected default requirement_type 'wajib', got %s", resp.RequirementType)
 	}
@@ -47,7 +45,7 @@ func TestCreateQuestion_Success_TextType(t *testing.T) {
 	}
 }
 
-func TestCreateQuestion_Success_DropdownWithOptions(t *testing.T) {
+func TestCreateQuestion_Success_SelectWithOptions(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_q2", "panitia_q2@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusDraft)
@@ -55,7 +53,7 @@ func TestCreateQuestion_Success_DropdownWithOptions(t *testing.T) {
 	h := handlers.NewQuestionHandler(db)
 	body := handlers.QuestionRequest{
 		QuestionText: "Ukuran baju?",
-		QuestionType: models.QuestionTypeDropdown,
+		QuestionType: models.QuestionTypeSelect,
 		Options: []handlers.OptionInput{
 			{OptionLabel: "S", OptionValue: "S", DisplayOrder: 1},
 			{OptionLabel: "M", OptionValue: "M", DisplayOrder: 2},
@@ -71,8 +69,7 @@ func TestCreateQuestion_Success_DropdownWithOptions(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp handlers.QuestionResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[handlers.QuestionResponse](t, rr.Body.Bytes())
 	if len(resp.Options) != 3 {
 		t.Fatalf("expected 3 options, got %d", len(resp.Options))
 	}
@@ -96,13 +93,13 @@ func TestCreateQuestion_MissingQuestionText_Fails(t *testing.T) {
 	}
 }
 
-func TestCreateQuestion_InvalidQuestionType_Fails(t *testing.T) {
+func TestCreateQuestion_DropdownType_Fails(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_q4", "panitia_q4@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusDraft)
 
 	h := handlers.NewQuestionHandler(db)
-	body := handlers.QuestionRequest{QuestionText: "Test?", QuestionType: "select"} // menggunakan nilai usang 'select', seharusnya 'dropdown'
+	body := handlers.QuestionRequest{QuestionText: "Test?", QuestionType: "dropdown"}
 	req := newQuestionRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/questions", event.ID), organizer.ID, models.RoleAdminPanitia, body)
 	req = withChiParam(req, "id", fmt.Sprintf("%d", event.ID))
 	rr := httptest.NewRecorder()
@@ -110,25 +107,25 @@ func TestCreateQuestion_InvalidQuestionType_Fails(t *testing.T) {
 	h.Create(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for invalid question_type 'select' (should be 'dropdown'), got %d", rr.Code)
+		t.Fatalf("expected 400 for invalid question_type 'dropdown', got %d", rr.Code)
 	}
 }
 
-func TestCreateQuestion_FileUploadType_Success(t *testing.T) {
+func TestCreateQuestion_FileUploadType_Fails(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_q5", "panitia_q5@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusDraft)
 
 	h := handlers.NewQuestionHandler(db)
-	body := handlers.QuestionRequest{QuestionText: "Upload KTP", QuestionType: models.QuestionTypeFileUpload}
+	body := handlers.QuestionRequest{QuestionText: "Upload KTP", QuestionType: "file_upload"}
 	req := newQuestionRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/questions", event.ID), organizer.ID, models.RoleAdminPanitia, body)
 	req = withChiParam(req, "id", fmt.Sprintf("%d", event.ID))
 	rr := httptest.NewRecorder()
 
 	h.Create(rr, req)
 
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201 for file_upload type, got %d, body: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unsupported file_upload type, got %d, body: %s", rr.Code, rr.Body.String())
 	}
 }
 
@@ -154,13 +151,13 @@ func TestCreateQuestion_OptionsOnTextType_Fails(t *testing.T) {
 	}
 }
 
-func TestCreateQuestion_DropdownWithoutOptions_Fails(t *testing.T) {
+func TestCreateQuestion_SelectWithoutOptions_Fails(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_q7", "panitia_q7@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusDraft)
 
 	h := handlers.NewQuestionHandler(db)
-	body := handlers.QuestionRequest{QuestionText: "Pilih?", QuestionType: models.QuestionTypeDropdown}
+	body := handlers.QuestionRequest{QuestionText: "Pilih?", QuestionType: models.QuestionTypeSelect}
 	req := newQuestionRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/questions", event.ID), organizer.ID, models.RoleAdminPanitia, body)
 	req = withChiParam(req, "id", fmt.Sprintf("%d", event.ID))
 	rr := httptest.NewRecorder()
@@ -168,7 +165,7 @@ func TestCreateQuestion_DropdownWithoutOptions_Fails(t *testing.T) {
 	h.Create(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 when a dropdown question has zero options, got %d", rr.Code)
+		t.Fatalf("expected 400 when a select question has zero options, got %d", rr.Code)
 	}
 }
 
@@ -301,8 +298,7 @@ func TestCreateQuestion_DisplayOrder_AutoIncrements(t *testing.T) {
 		if rr.Code != http.StatusCreated {
 			t.Fatalf("expected 201 creating question %d, got %d", i, rr.Code)
 		}
-		var resp handlers.QuestionResponse
-		_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+		resp := testutil.DecodeData[handlers.QuestionResponse](t, rr.Body.Bytes())
 		if resp.DisplayOrder != i {
 			t.Errorf("expected display_order %d for question %d, got %d", i, i, resp.DisplayOrder)
 		}
@@ -315,13 +311,13 @@ func TestUpdateQuestion_ReplacesOptions(t *testing.T) {
 	db := testutil.MustSetupDB(t)
 	organizer, _ := testutil.CreateTestUser(db, "panitia_q15", "panitia_q15@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
 	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusDraft)
-	question, _ := testutil.CreateTestQuestion(db, event.ID, models.QuestionTypeDropdown, models.RequirementTypeWajib)
+	question, _ := testutil.CreateTestQuestion(db, event.ID, models.QuestionTypeSelect, models.RequirementTypeWajib)
 	db.Create(&models.QuestionOption{QuestionID: question.ID, OptionLabel: "Old", OptionValue: "old", IsActive: true})
 
 	h := handlers.NewQuestionHandler(db)
 	body := handlers.QuestionRequest{
 		QuestionText: "Updated question",
-		QuestionType: models.QuestionTypeDropdown,
+		QuestionType: models.QuestionTypeSelect,
 		Options: []handlers.OptionInput{
 			{OptionLabel: "New1", OptionValue: "new1"},
 			{OptionLabel: "New2", OptionValue: "new2"},
@@ -337,8 +333,7 @@ func TestUpdateQuestion_ReplacesOptions(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp handlers.QuestionResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[handlers.QuestionResponse](t, rr.Body.Bytes())
 	if len(resp.Options) != 2 {
 		t.Fatalf("expected exactly 2 options after replace, got %d", len(resp.Options))
 	}
@@ -406,8 +401,7 @@ func TestDeleteQuestion_SoftDeletesAndExcludedFromDefaultList(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	h.ListByEvent(listRR, listReq)
 
-	var list []handlers.QuestionResponse
-	_ = json.Unmarshal(listRR.Body.Bytes(), &list)
+	list := testutil.DecodeData[[]handlers.QuestionResponse](t, listRR.Body.Bytes())
 	if len(list) != 0 {
 		t.Fatalf("expected 0 questions in default list after soft-delete, got %d", len(list))
 	}
@@ -452,8 +446,7 @@ func TestListQuestions_OrderedByDisplayOrder(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
-	var list []handlers.QuestionResponse
-	_ = json.Unmarshal(rr.Body.Bytes(), &list)
+	list := testutil.DecodeData[[]handlers.QuestionResponse](t, rr.Body.Bytes())
 	if len(list) != 3 {
 		t.Fatalf("expected 3 questions, got %d", len(list))
 	}

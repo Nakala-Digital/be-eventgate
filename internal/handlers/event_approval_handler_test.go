@@ -296,8 +296,7 @@ func TestUnpublishEvent_RevertsToDraft_DoesNotWriteApprovalLog(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var resp models.Event
-	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+	resp := testutil.DecodeData[models.Event](t, rr.Body.Bytes())
 	if resp.Status != models.EventStatusDraft {
 		t.Errorf("expected status draft after unpublish, got %s", resp.Status)
 	}
@@ -436,10 +435,7 @@ func TestListApprovalLogs_ReturnsFullHistory(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
-	var logs []handlers.ApprovalLogResponse
-	if err := json.Unmarshal(rr.Body.Bytes(), &logs); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
+	logs := testutil.DecodeData[[]handlers.ApprovalLogResponse](t, rr.Body.Bytes())
 	if len(logs) != 2 {
 		t.Fatalf("expected 2 approval log entries (submitted, approved), got %d", len(logs))
 	}
