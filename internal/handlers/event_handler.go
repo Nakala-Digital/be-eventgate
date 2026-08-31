@@ -108,14 +108,13 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	req.Normalize()
 
-	// Validasi field wajib
+	// Validasi field wajib (Banner dijadikan opsional bila frontend belum mengunggah banner)
 	if strings.TrimSpace(req.Title) == "" ||
 		strings.TrimSpace(req.Description) == "" ||
-		strings.TrimSpace(req.Banner) == "" ||
 		strings.TrimSpace(req.Location) == "" ||
 		req.StartTime == nil || req.StartTime.IsZero() ||
 		req.EndTime == nil || req.EndTime.IsZero() {
-		httpx.WriteError(w, http.StatusBadRequest, "title, description, banner, location, start_time, and end_time are required")
+		httpx.WriteError(w, http.StatusBadRequest, "title, description, location, start_time, and end_time are required")
 		return
 	}
 
@@ -149,19 +148,20 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	event := models.Event{
-		OrganizerID: userID,
-		CreatedByID: userID,
-		Title:       strings.TrimSpace(req.Title),
-		Description: strings.TrimSpace(req.Description),
-		Banner:      strings.TrimSpace(req.Banner),
-		Location:    strings.TrimSpace(req.Location),
-		Slug:        slugify(req.Title),
-		StartTime:   *req.StartTime,
-		EndTime:     *req.EndTime,
-		IsPaid:      req.IsPaid,
-		Price:       req.Price,
-		Quota:       req.Quota,
-		Status:      status,
+		OrganizerID:  userID,
+		CreatedByID:  userID,
+		Title:        strings.TrimSpace(req.Title),
+		Description:  strings.TrimSpace(req.Description),
+		Banner:       strings.TrimSpace(req.Banner),
+		Location:     strings.TrimSpace(req.Location),
+		Slug:         slugify(req.Title),
+		StartTime:    *req.StartTime,
+		EndTime:      *req.EndTime,
+		IsPaid:       req.IsPaid,
+		Price:        req.Price,
+		Quota:        req.Quota,
+		Status:       status,
+		EventVersion: 1,
 	}
 
 	if err := h.DB.Create(&event).Error; err != nil {
@@ -274,11 +274,10 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(req.Title) == "" ||
 		strings.TrimSpace(req.Description) == "" ||
-		strings.TrimSpace(req.Banner) == "" ||
 		strings.TrimSpace(req.Location) == "" ||
 		req.StartTime == nil || req.StartTime.IsZero() ||
 		req.EndTime == nil || req.EndTime.IsZero() {
-		httpx.WriteError(w, http.StatusBadRequest, "title, description, banner, location, start_time, and end_time are required")
+		httpx.WriteError(w, http.StatusBadRequest, "title, description, location, start_time, and end_time are required")
 		return
 	}
 
