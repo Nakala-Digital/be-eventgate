@@ -38,7 +38,18 @@ func TestMe_Success(t *testing.T) {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
 
-	profile := testutil.DecodeData[handlers.UserProfile](t, rr.Body.Bytes())
+	var resp struct {
+		Success bool                 `json:"success"`
+		Message string               `json:"message"`
+		Data    handlers.UserProfile `json:"data"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if !resp.Success {
+		t.Errorf("expected success true, got false")
+	}
+	profile := resp.Data
 	if profile.Username != "superadmin1" {
 		t.Errorf("expected username superadmin1, got %s", profile.Username)
 	}

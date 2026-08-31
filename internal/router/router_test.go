@@ -24,10 +24,13 @@ func doLogin(t *testing.T, baseURL, email, password string) (int, string) {
 	}
 	defer resp.Body.Close()
 
-	result := decodeHTTPData[struct {
-		Token string `json:"token"`
-	}](t, resp.Body)
-	return resp.StatusCode, result.Token
+	var result struct {
+		Data struct {
+			Token string `json:"token"`
+		} `json:"data"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	return resp.StatusCode, result.Data.Token
 }
 
 func decodeHTTPData[T any](t *testing.T, body io.Reader) T {

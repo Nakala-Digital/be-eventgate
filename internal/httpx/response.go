@@ -3,15 +3,24 @@ package httpx
 import (
 	"net/http"
 
-	appresponse "be-eventgate/pkg/utils/response"
+	"be-eventgate/pkg/utils/response"
 )
 
-// WriteJSON menyusun respons sukses menggunakan JSON envelope baku aplikasi.
+// Response merepresentasikan struktur JSON baku untuk respons API.
+type Response = response.Response
+
+// WriteJSON menyusun dan mengirimkan payload respons HTTP sukses dalam format JSON terstandarisasi envelope {success, message, data}.
 func WriteJSON(w http.ResponseWriter, status int, payload interface{}) {
-	appresponse.Success(w, status, "request completed successfully", payload)
+	response.Success(w, status, "success", payload)
 }
 
-// WriteError mengirimkan respons kesalahan menggunakan JSON envelope baku aplikasi.
-func WriteError(w http.ResponseWriter, status int, message string) {
-	appresponse.Error(w, status, message, nil)
+// WriteSuccess menyusun dan mengirimkan respons HTTP sukses dengan pesan deskriptif dan payload.
+func WriteSuccess(w http.ResponseWriter, status int, message string, payload interface{}) {
+	response.Success(w, status, message, payload)
 }
+
+// WriteError mengirimkan respons kesalahan HTTP menggunakan format envelope {success: false, message: message}.
+func WriteError(w http.ResponseWriter, status int, message string) {
+	response.Error(w, status, message, nil)
+}
+

@@ -34,15 +34,25 @@ func TestLogin_Success(t *testing.T) {
 		t.Fatalf("expected 200, got %d, body: %s", rr.Code, rr.Body.String())
 	}
 
-	resp := testutil.DecodeData[handlers.LoginResponse](t, rr.Body.Bytes())
-	if resp.Token == "" {
+	var resp struct {
+		Success bool                   `json:"success"`
+		Message string                 `json:"message"`
+		Data    handlers.LoginResponse `json:"data"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if !resp.Success {
+		t.Errorf("expected success true, got false")
+	}
+	if resp.Data.Token == "" {
 		t.Fatal("expected a non-empty token in the login response")
 	}
-	if resp.User.RoleName != models.RoleAdminPanitia {
-		t.Errorf("expected role_name %s, got %s", models.RoleAdminPanitia, resp.User.RoleName)
+	if resp.Data.User.RoleName != models.RoleAdminPanitia {
+		t.Errorf("expected role_name %s, got %s", models.RoleAdminPanitia, resp.Data.User.RoleName)
 	}
-	if resp.User.Email != "panitia1@eventgate.test" {
-		t.Errorf("expected email panitia1@eventgate.test, got %s", resp.User.Email)
+	if resp.Data.User.Email != "panitia1@eventgate.test" {
+		t.Errorf("expected email panitia1@eventgate.test, got %s", resp.Data.User.Email)
 	}
 }
 

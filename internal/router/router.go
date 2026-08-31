@@ -11,6 +11,7 @@ import (
 	"be-eventgate/internal/httpx"
 	appmw "be-eventgate/internal/middleware"
 	"be-eventgate/internal/models"
+	"be-eventgate/pkg/utils/response"
 )
 
 // New melakukan inisialisasi dan pengelompokan rute HTTP untuk fungsionalitas
@@ -103,7 +104,7 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(appmw.RequireRole(models.RoleSuperAdmin))
 				r.Get("/admin/ping", func(w http.ResponseWriter, r *http.Request) {
-					httpx.WriteJSON(w, http.StatusOK, map[string]string{"message": "pong, you are super_admin"})
+					response.Success(w, http.StatusOK, "pong, you are super_admin", nil)
 				})
 			})
 		})
