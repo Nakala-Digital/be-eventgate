@@ -22,10 +22,12 @@ func doLogin(t *testing.T, baseURL, email, password string) (int, string) {
 	defer resp.Body.Close()
 
 	var result struct {
-		Token string `json:"token"`
+		Data struct {
+			Token string `json:"token"`
+		} `json:"data"`
 	}
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	return resp.StatusCode, result.Token
+	return resp.StatusCode, result.Data.Token
 }
 
 // TestRouter_FullAuthFlow menguji seluruh acceptance criteria EVG-41 secara
