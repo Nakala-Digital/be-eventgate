@@ -145,7 +145,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, event)
+	httpx.WriteSuccess(w, http.StatusCreated, "event created successfully", event)
 }
 
 // List menampilkan daftar event dengan dukungan filter pencarian dan status.
@@ -170,7 +170,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, events)
+	httpx.WriteSuccess(w, http.StatusOK, "events retrieved successfully", events)
 }
 
 // GetByID menampilkan rincian detail dari satu event.
@@ -302,7 +302,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, event)
+	httpx.WriteSuccess(w, http.StatusOK, "event updated successfully", event)
 }
 
 // Delete menghapus (soft-delete) data event.
@@ -343,5 +343,5 @@ func (h *EventHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, map[string]string{"message": "event deleted successfully"})
+	httpx.WriteSuccess(w, http.StatusOK, "event deleted successfully", nil)
 }

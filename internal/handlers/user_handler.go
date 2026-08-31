@@ -54,5 +54,5 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toUserProfile(user))
+	httpx.WriteSuccess(w, http.StatusOK, "user profile retrieved successfully", toUserProfile(user))
 }
