@@ -443,3 +443,61 @@ func TestListApprovalLogs_ReturnsFullHistory(t *testing.T) {
 		t.Errorf("expected log order [submitted, approved], got [%s, %s]", logs[0].Action, logs[1].Action)
 	}
 }
+
+func TestRejectEvent_WithReasonField_Success(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+	organizer, _ := testutil.CreateTestUser(db, "panitia19", "panitia19@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+	reviewer, _ := testutil.CreateTestUser(db, "superadmin11", "superadmin11@eventgate.test", "Password123!", models.RoleSuperAdmin, true)
+	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPendingApproval)
+
+	h := handlers.NewEventHandler(db)
+	req := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/reject", event.ID), reviewer.ID, models.RoleSuperAdmin, map[string]string{
+		"reason": "Alasan penolakan melalui field reason",
+	})
+	req = withChiParam(req, "id", fmt.Sprintf("%d", event.ID))
+	rr := httptest.NewRecorder()
+
+	h.RejectEvent(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 for reject with reason field, got %d, body: %s", rr.Code, rr.Body.String())
+	}
+
+	var logs []models.EventApprovalLog
+	db.Where("event_id = ? AND action = ?", event.ID, models.ApprovalActionRejected).Find(&logs)
+	if len(logs) != 1 {
+		t.Fatalf("expected exactly 1 'rejected' log entry, got %d", len(logs))
+	}
+	if logs[0].Notes != "Alasan penolakan melalui field reason" {
+		t.Errorf("expected log notes to match reason, got '%s'", logs[0].Notes)
+	}
+}
+
+func TestRequestRevision_WithReasonField_Success(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+	organizer, _ := testutil.CreateTestUser(db, "panitia20", "panitia20@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+	reviewer, _ := testutil.CreateTestUser(db, "superadmin12", "superadmin12@eventgate.test", "Password123!", models.RoleSuperAdmin, true)
+	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPendingApproval)
+
+	h := handlers.NewEventHandler(db)
+	req := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/request-revision", event.ID), reviewer.ID, models.RoleSuperAdmin, map[string]string{
+		"reason": "Mohon lengkapi rincian kuota dan jadwal kegiatan pada deskripsi.",
+	})
+	req = withChiParam(req, "id", fmt.Sprintf("%d", event.ID))
+	rr := httptest.NewRecorder()
+
+	h.RequestRevision(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 for request-revision with reason field, got %d, body: %s", rr.Code, rr.Body.String())
+	}
+
+	var logs []models.EventApprovalLog
+	db.Where("event_id = ? AND action = ?", event.ID, models.ApprovalActionRevisionRequested).Find(&logs)
+	if len(logs) != 1 {
+		t.Fatalf("expected exactly 1 'revision_requested' log entry, got %d", len(logs))
+	}
+	if logs[0].Notes != "Mohon lengkapi rincian kuota dan jadwal kegiatan pada deskripsi." {
+		t.Errorf("expected log notes to match reason, got '%s'", logs[0].Notes)
+	}
+}

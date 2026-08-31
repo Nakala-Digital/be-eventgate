@@ -1,4 +1,4 @@
-﻿package http
+package http
 
 import (
     "net/http"
@@ -21,11 +21,9 @@ func NewRouter() *chi.Mux {
         response.Success(w, http.StatusOK, "Welcome to EventGate API", nil)
     })
 
-    r.Route("/api/v1", func(r chi.Router) {
-        r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-            response.Success(w, http.StatusOK, "API is running healthy", map[string]string{
-                "status": "UP",
-            })
+    r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+        response.Success(w, http.StatusOK, "API is running healthy", map[string]string{
+            "status": "UP",
         })
     })
 

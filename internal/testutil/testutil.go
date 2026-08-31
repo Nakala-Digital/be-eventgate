@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 	"be-eventgate/internal/database"
 	"be-eventgate/internal/models"
 )
+
+var eventSeq uint64
 
 // ResponseEnvelope merepresentasikan kontrak respons JSON seluruh endpoint.
 type ResponseEnvelope struct {
@@ -119,13 +122,14 @@ func CreateTestUser(db *gorm.DB, username, email, plainPassword, roleName string
 
 func CreateTestEvent(db *gorm.DB, organizerID uint, status string) (*models.Event, error) {
 	now := time.Now()
+	seq := atomic.AddUint64(&eventSeq, 1)
 	event := models.Event{
 		OrganizerID: organizerID,
-		Title:       fmt.Sprintf("Test Event %d", now.UnixNano()),
+		Title:       fmt.Sprintf("Test Event %d-%d", now.UnixNano(), seq),
 		Description: "Test Description",
 		Banner:      "http://example.com/banner.jpg",
 		Location:    "Test Location",
-		Slug:        fmt.Sprintf("test-event-%d", now.UnixNano()),
+		Slug:        fmt.Sprintf("test-event-%d-%d", now.UnixNano(), seq),
 		StartTime:   now.Add(24 * time.Hour),
 		EndTime:     now.Add(48 * time.Hour),
 		IsPaid:      false,

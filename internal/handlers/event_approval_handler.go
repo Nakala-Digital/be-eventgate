@@ -16,10 +16,18 @@ import (
 )
 
 // ReviewRequest dipakai untuk approve/reject/request-revision/publish/
-// unpublish. Notes WAJIB untuk reject & request-revision (divalidasi
+// unpublish. Notes / Reason WAJIB untuk reject & request-revision (divalidasi
 // per-handler), opsional untuk aksi lainnya.
 type ReviewRequest struct {
-	Notes string `json:"notes"`
+	Notes  string `json:"notes"`
+	Reason string `json:"reason"`
+}
+
+func (r *ReviewRequest) GetNotes() string {
+	if r.Notes != "" {
+		return r.Notes
+	}
+	return r.Reason
 }
 
 func parseEventIDParam(r *http.Request) (uint, error) {
@@ -33,7 +41,7 @@ func parseEventIDParam(r *http.Request) (uint, error) {
 
 func (h *EventHandler) loadEvent(id uint) (*models.Event, error) {
 	var event models.Event
-	if err := h.DB.First(&event, id).Error; err != nil {
+	if err := h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(&event, id).Error; err != nil {
 		return nil, err
 	}
 	return &event, nil
@@ -155,7 +163,7 @@ func (h *EventHandler) SubmitForApproval(w http.ResponseWriter, r *http.Request)
 			Action:        models.ApprovalActionSubmitted,
 			SubmittedByID: &userID,
 			SubmittedAt:   &now,
-			Notes:         req.Notes,
+			Notes:         req.GetNotes(),
 		}
 		return tx.Create(&log).Error
 	})
@@ -164,8 +172,7 @@ func (h *EventHandler) SubmitForApproval(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	event.Status = models.EventStatusPendingApproval
-	event.EventVersion = newVersion
+	_ = h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(event, event.ID)
 	httpx.WriteJSON(w, http.StatusOK, event)
 }
 
@@ -188,11 +195,12 @@ func (h *EventHandler) reviewAction(w http.ResponseWriter, r *http.Request, targ
 	}
 
 	var req ReviewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if notesRequired && req.Notes == "" {
+	notes := req.GetNotes()
+	if notesRequired && notes == "" {
 		httpx.WriteError(w, http.StatusBadRequest, "notes is required for this action")
 		return
 	}
@@ -232,7 +240,7 @@ func (h *EventHandler) reviewAction(w http.ResponseWriter, r *http.Request, targ
 			Action:       logAction,
 			ReviewedByID: &reviewerID,
 			ReviewedAt:   &now,
-			Notes:        req.Notes,
+			Notes:        notes,
 		}
 		return tx.Create(&log).Error
 	})
@@ -241,7 +249,7 @@ func (h *EventHandler) reviewAction(w http.ResponseWriter, r *http.Request, targ
 		return
 	}
 
-	event.Status = targetStatus
+	_ = h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(event, event.ID)
 	httpx.WriteJSON(w, http.StatusOK, event)
 }
 
@@ -305,8 +313,7 @@ func (h *EventHandler) PublishEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event.Status = models.EventStatusPublished
-	event.PublishedAt = &now
+	_ = h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(event, event.ID)
 	httpx.WriteJSON(w, http.StatusOK, event)
 }
 
@@ -350,7 +357,6 @@ func (h *EventHandler) UnpublishEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event.Status = models.EventStatusDraft
-	event.PublishedAt = nil
+	_ = h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(event, event.ID)
 	httpx.WriteJSON(w, http.StatusOK, event)
 }

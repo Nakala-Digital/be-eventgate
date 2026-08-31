@@ -26,16 +26,38 @@ func NewEventHandler(db *gorm.DB) *EventHandler {
 }
 
 type EventRequest struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Banner      string    `json:"banner"`
-	StartTime   time.Time `json:"start_time"`
-	EndTime     time.Time `json:"end_time"`
-	Location    string    `json:"location"`
-	IsPaid      bool      `json:"is_paid"`
-	Price       float64   `json:"price"`
-	Quota       int       `json:"quota"`
-	Status      string    `json:"status"`
+	Title         string     `json:"title"`
+	Name          string     `json:"name"`
+	Description   string     `json:"description"`
+	Category      string     `json:"category"`
+	OrganizerName string     `json:"organizer_name"`
+	Banner        string     `json:"banner"`
+	BannerURL     string     `json:"banner_url"`
+	StartTime     *time.Time `json:"start_time"`
+	StartDate     *time.Time `json:"start_date"`
+	EndTime       *time.Time `json:"end_time"`
+	EndDate       *time.Time `json:"end_date"`
+	Location      string     `json:"location"`
+	IsPaid        bool       `json:"is_paid"`
+	TicketType    string     `json:"ticket_type"`
+	Price         float64    `json:"price"`
+	Quota         int        `json:"quota"`
+	Status        string     `json:"status"`
+}
+
+func (req *EventRequest) Normalize() {
+	if strings.TrimSpace(req.Title) == "" && strings.TrimSpace(req.Name) != "" {
+		req.Title = strings.TrimSpace(req.Name)
+	}
+	if strings.TrimSpace(req.Banner) == "" && strings.TrimSpace(req.BannerURL) != "" {
+		req.Banner = strings.TrimSpace(req.BannerURL)
+	}
+	if (req.StartTime == nil || req.StartTime.IsZero()) && req.StartDate != nil && !req.StartDate.IsZero() {
+		req.StartTime = req.StartDate
+	}
+	if (req.EndTime == nil || req.EndTime.IsZero()) && req.EndDate != nil && !req.EndDate.IsZero() {
+		req.EndTime = req.EndDate
+	}
 }
 
 // slugify mengubah judul menjadi slug unik URL-friendly.
@@ -84,13 +106,15 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Normalize()
+
 	// Validasi field wajib
 	if strings.TrimSpace(req.Title) == "" ||
 		strings.TrimSpace(req.Description) == "" ||
 		strings.TrimSpace(req.Banner) == "" ||
 		strings.TrimSpace(req.Location) == "" ||
-		req.StartTime.IsZero() ||
-		req.EndTime.IsZero() {
+		req.StartTime == nil || req.StartTime.IsZero() ||
+		req.EndTime == nil || req.EndTime.IsZero() {
 		httpx.WriteError(w, http.StatusBadRequest, "title, description, banner, location, start_time, and end_time are required")
 		return
 	}
@@ -100,7 +124,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !req.EndTime.After(req.StartTime) {
+	if !req.EndTime.After(*req.StartTime) {
 		httpx.WriteError(w, http.StatusBadRequest, "end_time must be after start_time")
 		return
 	}
@@ -132,8 +156,8 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Banner:      strings.TrimSpace(req.Banner),
 		Location:    strings.TrimSpace(req.Location),
 		Slug:        slugify(req.Title),
-		StartTime:   req.StartTime,
-		EndTime:     req.EndTime,
+		StartTime:   *req.StartTime,
+		EndTime:     *req.EndTime,
 		IsPaid:      req.IsPaid,
 		Price:       req.Price,
 		Quota:       req.Quota,
@@ -145,13 +169,15 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_ = h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(&event, event.ID)
+
 	httpx.WriteSuccess(w, http.StatusCreated, "event created successfully", event)
 }
 
 // List menampilkan daftar event dengan dukungan filter pencarian dan status.
 // Endpoint: GET /api/events
 func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
-	query := h.DB.Model(&models.Event{})
+	query := h.DB.Model(&models.Event{}).Preload("Organizer.Role").Preload("CreatedBy.Role")
 
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
@@ -184,7 +210,7 @@ func (h *EventHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var event models.Event
-	if err := h.DB.First(&event, uint(eventID)).Error; err != nil {
+	if err := h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(&event, uint(eventID)).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			httpx.WriteError(w, http.StatusNotFound, "event not found")
 			return
@@ -221,7 +247,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var event models.Event
-	if err := h.DB.First(&event, uint(eventID)).Error; err != nil {
+	if err := h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(&event, uint(eventID)).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			httpx.WriteError(w, http.StatusNotFound, "event not found")
 			return
@@ -244,12 +270,14 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Normalize()
+
 	if strings.TrimSpace(req.Title) == "" ||
 		strings.TrimSpace(req.Description) == "" ||
 		strings.TrimSpace(req.Banner) == "" ||
 		strings.TrimSpace(req.Location) == "" ||
-		req.StartTime.IsZero() ||
-		req.EndTime.IsZero() {
+		req.StartTime == nil || req.StartTime.IsZero() ||
+		req.EndTime == nil || req.EndTime.IsZero() {
 		httpx.WriteError(w, http.StatusBadRequest, "title, description, banner, location, start_time, and end_time are required")
 		return
 	}
@@ -259,7 +287,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !req.EndTime.After(req.StartTime) {
+	if !req.EndTime.After(*req.StartTime) {
 		httpx.WriteError(w, http.StatusBadRequest, "end_time must be after start_time")
 		return
 	}
@@ -287,8 +315,8 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 	event.Description = strings.TrimSpace(req.Description)
 	event.Banner = strings.TrimSpace(req.Banner)
 	event.Location = strings.TrimSpace(req.Location)
-	event.StartTime = req.StartTime
-	event.EndTime = req.EndTime
+	event.StartTime = *req.StartTime
+	event.EndTime = *req.EndTime
 	event.IsPaid = req.IsPaid
 	event.Price = req.Price
 	event.Quota = req.Quota
@@ -301,6 +329,8 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to update event")
 		return
 	}
+
+	_ = h.DB.Preload("Organizer.Role").Preload("CreatedBy.Role").First(&event, event.ID)
 
 	httpx.WriteSuccess(w, http.StatusOK, "event updated successfully", event)
 }

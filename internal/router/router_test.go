@@ -407,3 +407,37 @@ func TestRouter_PublicRegistrationWorkflow(t *testing.T) {
 		t.Fatalf("expected 200 fetching registration by code without token, got %d", getResp.StatusCode)
 	}
 }
+
+func TestRouter_HealthAndV1Prefix(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+	r := router.New(db, "test-secret", 24)
+	server := httptest.NewServer(r)
+	defer server.Close()
+
+	// 1. GET /api/v1/health -> 200
+	resp, err := http.Get(server.URL + "/api/v1/health")
+	if err != nil {
+		t.Fatalf("health request error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for /api/v1/health, got %d", resp.StatusCode)
+	}
+
+	// 2. GET /api/health -> 200
+	resp2, err := http.Get(server.URL + "/api/health")
+	if err != nil {
+		t.Fatalf("health request error: %v", err)
+	}
+	if resp2.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for /api/health, got %d", resp2.StatusCode)
+	}
+
+	// 3. GET /api/v1/events without auth -> 401 (Not 404)
+	resp3, err := http.Get(server.URL + "/api/v1/events")
+	if err != nil {
+		t.Fatalf("v1 events request error: %v", err)
+	}
+	if resp3.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for /api/v1/events without token (not 404), got %d", resp3.StatusCode)
+	}
+}

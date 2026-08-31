@@ -34,6 +34,13 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	registrationHandler := handlers.NewRegistrationHandler(db)
 
 	registerAPIRoutes := func(r chi.Router) {
+		// Health Check
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			response.Success(w, http.StatusOK, "API is running healthy", map[string]string{
+				"status": "UP",
+			})
+		})
+
 		// Rute Publik (Tanpa Autentikasi)
 		r.Post("/auth/login", authHandler.Login)
 

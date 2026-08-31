@@ -299,3 +299,101 @@ func TestEventHandler_CRUD(t *testing.T) {
 		}
 	})
 }
+
+func TestEventHandler_FrontendPayloadAndPreload(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+
+	panitia, err := testutil.CreateTestUser(db, "osis_panitia", "osis@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+	if err != nil {
+		t.Fatalf("failed to create panitia: %v", err)
+	}
+
+	r := router.New(db, "test-secret", 24)
+	tokenPanitia := createAuthToken(t, r, panitia.Email, "Password123!")
+
+	// 1. Create using frontend payload format (name, banner_url, start_date, end_date, ticket_type, category, organizer_name)
+	payload := map[string]interface{}{
+		"title":          "Classmeet Al-Azhar 2026",
+		"name":           "Classmeet Al-Azhar 2026",
+		"description":    "Kompetisi olahraga antar kelas.",
+		"category":       "Non-Akademik",
+		"organizer_name": "OSIS Al-Azhar",
+		"location":       "Lapangan Utama Sekolah",
+		"banner":         "https://example.com/banner.jpg",
+		"banner_url":     "https://example.com/banner.jpg",
+		"start_time":     "2026-09-04T08:00:00.000Z",
+		"start_date":     "2026-09-04T08:00:00.000Z",
+		"end_time":       "2026-09-04T16:00:00.000Z",
+		"end_date":       "2026-09-04T16:00:00.000Z",
+		"is_paid":        false,
+		"ticket_type":    "gratis",
+		"price":          0,
+		"quota":          500,
+	}
+
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+tokenPanitia)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var createResp struct {
+		Data models.Event `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &createResp)
+	created := createResp.Data
+
+	if created.Title != "Classmeet Al-Azhar 2026" {
+		t.Errorf("expected title 'Classmeet Al-Azhar 2026', got '%s'", created.Title)
+	}
+	if created.Organizer.Username != "osis_panitia" {
+		t.Errorf("expected preloaded organizer username 'osis_panitia', got '%s'", created.Organizer.Username)
+	}
+	if created.CreatedBy.Username != "osis_panitia" {
+		t.Errorf("expected preloaded created_by_user username 'osis_panitia', got '%s'", created.CreatedBy.Username)
+	}
+
+	// 2. Fetch list and verify preload
+	reqList := httptest.NewRequest(http.MethodGet, "/api/events", nil)
+	reqList.Header.Set("Authorization", "Bearer "+tokenPanitia)
+	wList := httptest.NewRecorder()
+	r.ServeHTTP(wList, reqList)
+
+	if wList.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for list, got %d", wList.Code)
+	}
+
+	var listResp struct {
+		Data []models.Event `json:"data"`
+	}
+	_ = json.Unmarshal(wList.Body.Bytes(), &listResp)
+	if len(listResp.Data) == 0 {
+		t.Fatalf("expected at least 1 event in list")
+	}
+	if listResp.Data[0].Organizer.Username != "osis_panitia" {
+		t.Errorf("expected preloaded organizer on list, got '%s'", listResp.Data[0].Organizer.Username)
+	}
+
+	// 3. Fetch detail by ID and verify preload
+	reqDetail := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/events/%d", created.ID), nil)
+	reqDetail.Header.Set("Authorization", "Bearer "+tokenPanitia)
+	wDetail := httptest.NewRecorder()
+	r.ServeHTTP(wDetail, reqDetail)
+
+	if wDetail.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for detail, got %d", wDetail.Code)
+	}
+
+	var detailResp struct {
+		Data models.Event `json:"data"`
+	}
+	_ = json.Unmarshal(wDetail.Body.Bytes(), &detailResp)
+	if detailResp.Data.Organizer.Username != "osis_panitia" {
+		t.Errorf("expected preloaded organizer on detail, got '%s'", detailResp.Data.Organizer.Username)
+	}
+}
