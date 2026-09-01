@@ -154,6 +154,7 @@ func TestRouter_EventApprovalWorkflow(t *testing.T) {
 	createBody, _ := json.Marshal(map[string]interface{}{
 		"title":       "Workflow Test Event",
 		"description": "Deskripsi test",
+		"category":    "Teknologi",
 		"banner":      "http://example.com/banner.jpg",
 		"location":    "Aula",
 		"start_time":  time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -263,6 +264,7 @@ func TestRouter_DynamicQuestionWorkflow(t *testing.T) {
 	createBody, _ := json.Marshal(map[string]interface{}{
 		"title":       "Event Form Test",
 		"description": "Deskripsi",
+		"category":    "Pendidikan",
 		"banner":      "http://example.com/b.jpg",
 		"location":    "Aula",
 		"start_time":  time.Now().Add(48 * time.Hour).Format(time.RFC3339),

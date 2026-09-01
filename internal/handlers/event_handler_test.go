@@ -83,10 +83,32 @@ func TestEventHandler_CRUD(t *testing.T) {
 			t.Fatalf("expected 400 for empty fields, got %d", w.Code)
 		}
 
+		// Missing Category Error
+		bodyCatErr, _ := json.Marshal(map[string]interface{}{
+			"title":       "Seminar No Category",
+			"description": "Tech conference description",
+			"category":    "",
+			"banner":      "https://example.com/banner.jpg",
+			"location":    "Jakarta",
+			"start_time":  start,
+			"end_time":    end,
+			"is_paid":     false,
+			"quota":       100,
+		})
+		reqCatErr := httptest.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(bodyCatErr))
+		reqCatErr.Header.Set("Authorization", "Bearer "+tokenPanitia1)
+		reqCatErr.Header.Set("Content-Type", "application/json")
+		wCatErr := httptest.NewRecorder()
+		r.ServeHTTP(wCatErr, reqCatErr)
+		if wCatErr.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 for missing category, got %d", wCatErr.Code)
+		}
+
 		// Paid event with 0 price
 		bodyPaidErr, _ := json.Marshal(map[string]interface{}{
 			"title":       "Seminar Paid Error",
 			"description": "Tech conference description",
+			"category":    "Teknologi",
 			"banner":      "https://example.com/banner.jpg",
 			"location":    "Jakarta",
 			"start_time":  start,
@@ -108,6 +130,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 		bodyDateErr, _ := json.Marshal(map[string]interface{}{
 			"title":       "Seminar Date Error",
 			"description": "Tech conference description",
+			"category":    "Teknologi",
 			"banner":      "https://example.com/banner.jpg",
 			"location":    "Jakarta",
 			"start_time":  end,
@@ -131,6 +154,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 		body, _ := json.Marshal(map[string]interface{}{
 			"title":       "Staf Event Attempt",
 			"description": "Description",
+			"category":    "Teknologi",
 			"banner":      "https://example.com/banner.jpg",
 			"location":    "Location",
 			"start_time":  start,
@@ -155,6 +179,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 		body1, _ := json.Marshal(map[string]interface{}{
 			"title":       "Go Workshop 2026",
 			"description": "Belajar Golang dari dasar hingga mahir.",
+			"category":    "Teknologi",
 			"banner":      "https://example.com/go.png",
 			"location":    "Auditorium JTK",
 			"start_time":  start,
@@ -180,6 +205,9 @@ func TestEventHandler_CRUD(t *testing.T) {
 		if createdEvent.ID == 0 || createdEvent.Title != "Go Workshop 2026" {
 			t.Fatalf("unexpected event response: %+v", createdEvent)
 		}
+		if createdEvent.Category != "Teknologi" {
+			t.Fatalf("expected category 'Teknologi', got '%s'", createdEvent.Category)
+		}
 		if createdEvent.Status != models.EventStatusDraft {
 			t.Fatalf("expected initial status 'draft', got '%s'", createdEvent.Status)
 		}
@@ -200,6 +228,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 		body2, _ := json.Marshal(map[string]interface{}{
 			"title":       "Global Tech Summit",
 			"description": "Konferensi Teknologi Tahunan",
+			"category":    "Umum",
 			"banner":      "https://example.com/summit.png",
 			"location":    "Main Hall",
 			"start_time":  start,
@@ -252,6 +281,7 @@ func TestEventHandler_CRUD(t *testing.T) {
 		bodyUpdate, _ := json.Marshal(map[string]interface{}{
 			"title":       "Hijacked Workshop",
 			"description": "Deskripsi baru",
+			"category":    "Teknologi",
 			"banner":      "https://example.com/go.png",
 			"location":    "Auditorium JTK",
 			"start_time":  start,

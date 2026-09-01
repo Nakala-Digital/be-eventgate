@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -24,10 +25,10 @@ type ReviewRequest struct {
 }
 
 func (r *ReviewRequest) GetNotes() string {
-	if r.Notes != "" {
-		return r.Notes
+	if strings.TrimSpace(r.Notes) != "" {
+		return strings.TrimSpace(r.Notes)
 	}
-	return r.Reason
+	return strings.TrimSpace(r.Reason)
 }
 
 func parseEventIDParam(r *http.Request) (uint, error) {

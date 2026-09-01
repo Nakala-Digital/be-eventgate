@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS events (
     name VARCHAR(255),
     title VARCHAR(255),
     description TEXT,
+    category VARCHAR(100) DEFAULT '',
     location VARCHAR(255) NOT NULL,
     banner_url VARCHAR(255),
     banner VARCHAR(255),

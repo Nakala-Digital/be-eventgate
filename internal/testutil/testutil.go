@@ -127,6 +127,7 @@ func CreateTestEvent(db *gorm.DB, organizerID uint, status string) (*models.Even
 		OrganizerID: organizerID,
 		Title:       fmt.Sprintf("Test Event %d-%d", now.UnixNano(), seq),
 		Description: "Test Description",
+		Category:    "Akademik",
 		Banner:      "http://example.com/banner.jpg",
 		Location:    "Test Location",
 		Slug:        fmt.Sprintf("test-event-%d-%d", now.UnixNano(), seq),

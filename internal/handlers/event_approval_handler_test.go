@@ -88,6 +88,7 @@ func TestSubmitForApproval_AfterCreateEvent_FlowSuccess(t *testing.T) {
 	createBody := handlers.EventRequest{
 		Title:       "Seminar Nasional AI 2026",
 		Description: "Seminar seputar tren AI terkini",
+		Category:    "Teknologi",
 		Location:    "Bandung",
 		StartTime:   &start,
 		EndTime:     &end,
@@ -542,5 +543,61 @@ func TestRequestRevision_WithReasonField_Success(t *testing.T) {
 	}
 	if logs[0].Notes != "Mohon lengkapi rincian kuota dan jadwal kegiatan pada deskripsi." {
 		t.Errorf("expected log notes to match reason, got '%s'", logs[0].Notes)
+	}
+}
+
+func TestRequestRevision_RequiresNotes_EmptyAndWhitespace_Fails(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+	organizer, _ := testutil.CreateTestUser(db, "panitia21", "panitia21@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+	reviewer, _ := testutil.CreateTestUser(db, "superadmin13", "superadmin13@eventgate.test", "Password123!", models.RoleSuperAdmin, true)
+
+	h := handlers.NewEventHandler(db)
+
+	// Case 1: Empty notes string
+	event1, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPendingApproval)
+	req1 := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/request-revision", event1.ID), reviewer.ID, models.RoleSuperAdmin, handlers.ReviewRequest{Notes: ""})
+	req1 = withChiParam(req1, "id", fmt.Sprintf("%d", event1.ID))
+	rr1 := httptest.NewRecorder()
+	h.RequestRevision(rr1, req1)
+	if rr1.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 when notes is empty for request-revision, got %d", rr1.Code)
+	}
+
+	// Case 2: Whitespace-only notes
+	event2, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPendingApproval)
+	req2 := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/request-revision", event2.ID), reviewer.ID, models.RoleSuperAdmin, handlers.ReviewRequest{Notes: "   \t  \n "})
+	req2 = withChiParam(req2, "id", fmt.Sprintf("%d", event2.ID))
+	rr2 := httptest.NewRecorder()
+	h.RequestRevision(rr2, req2)
+	if rr2.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 when notes is whitespace-only for request-revision, got %d", rr2.Code)
+	}
+
+	// Case 3: Empty body
+	event3, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPendingApproval)
+	req3 := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/request-revision", event3.ID), reviewer.ID, models.RoleSuperAdmin, nil)
+	req3 = withChiParam(req3, "id", fmt.Sprintf("%d", event3.ID))
+	rr3 := httptest.NewRecorder()
+	h.RequestRevision(rr3, req3)
+	if rr3.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 when body is nil/empty for request-revision, got %d", rr3.Code)
+	}
+}
+
+func TestRejectEvent_RequiresNotes_Whitespace_Fails(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+	organizer, _ := testutil.CreateTestUser(db, "panitia22", "panitia22@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+	reviewer, _ := testutil.CreateTestUser(db, "superadmin14", "superadmin14@eventgate.test", "Password123!", models.RoleSuperAdmin, true)
+	event, _ := testutil.CreateTestEvent(db, organizer.ID, models.EventStatusPendingApproval)
+
+	h := handlers.NewEventHandler(db)
+	req := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/reject", event.ID), reviewer.ID, models.RoleSuperAdmin, handlers.ReviewRequest{Notes: "   \t "})
+	req = withChiParam(req, "id", fmt.Sprintf("%d", event.ID))
+	rr := httptest.NewRecorder()
+
+	h.RejectEvent(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 when notes is whitespace for reject, got %d", rr.Code)
 	}
 }

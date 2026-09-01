@@ -25,6 +25,7 @@ type Event struct {
 	Organizer   User           `gorm:"foreignKey:OrganizerID" json:"organizer,omitempty"`
 	Title       string         `gorm:"column:title;size:255;not null" json:"title"`
 	Description string         `gorm:"column:description;type:text" json:"description"`
+	Category    string         `gorm:"column:category;size:100;not null;default:''" json:"category"`
 	Location    string         `gorm:"column:location;size:255;not null" json:"location"`
 	Banner      string         `gorm:"column:banner;size:255" json:"banner"`
 	Slug        string         `gorm:"column:slug;size:255;uniqueIndex" json:"slug"`

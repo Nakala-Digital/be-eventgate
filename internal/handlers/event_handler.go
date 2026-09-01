@@ -111,10 +111,11 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// Validasi field wajib (Banner dijadikan opsional bila frontend belum mengunggah banner)
 	if strings.TrimSpace(req.Title) == "" ||
 		strings.TrimSpace(req.Description) == "" ||
+		strings.TrimSpace(req.Category) == "" ||
 		strings.TrimSpace(req.Location) == "" ||
 		req.StartTime == nil || req.StartTime.IsZero() ||
 		req.EndTime == nil || req.EndTime.IsZero() {
-		httpx.WriteError(w, http.StatusBadRequest, "title, description, location, start_time, and end_time are required")
+		httpx.WriteError(w, http.StatusBadRequest, "title, description, category, location, start_time, and end_time are required")
 		return
 	}
 
@@ -152,6 +153,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CreatedByID:  userID,
 		Title:        strings.TrimSpace(req.Title),
 		Description:  strings.TrimSpace(req.Description),
+		Category:     strings.TrimSpace(req.Category),
 		Banner:       strings.TrimSpace(req.Banner),
 		Location:     strings.TrimSpace(req.Location),
 		Slug:         slugify(req.Title),
@@ -294,10 +296,11 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(req.Title) == "" ||
 		strings.TrimSpace(req.Description) == "" ||
+		strings.TrimSpace(req.Category) == "" ||
 		strings.TrimSpace(req.Location) == "" ||
 		req.StartTime == nil || req.StartTime.IsZero() ||
 		req.EndTime == nil || req.EndTime.IsZero() {
-		httpx.WriteError(w, http.StatusBadRequest, "title, description, location, start_time, and end_time are required")
+		httpx.WriteError(w, http.StatusBadRequest, "title, description, category, location, start_time, and end_time are required")
 		return
 	}
 
@@ -332,6 +335,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	event.Title = strings.TrimSpace(req.Title)
 	event.Description = strings.TrimSpace(req.Description)
+	event.Category = strings.TrimSpace(req.Category)
 	event.Banner = strings.TrimSpace(req.Banner)
 	event.Location = strings.TrimSpace(req.Location)
 	event.StartTime = *req.StartTime
