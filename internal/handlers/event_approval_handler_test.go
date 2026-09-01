@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -72,6 +73,48 @@ func TestSubmitForApproval_Success(t *testing.T) {
 	}
 	if logs[0].EventVersion != 1 {
 		t.Errorf("expected log event_version 1, got %d", logs[0].EventVersion)
+	}
+}
+
+func TestSubmitForApproval_AfterCreateEvent_FlowSuccess(t *testing.T) {
+	db := testutil.MustSetupDB(t)
+	organizer, _ := testutil.CreateTestUser(db, "panitia_flow", "panitia_flow@eventgate.test", "Password123!", models.RoleAdminPanitia, true)
+
+	h := handlers.NewEventHandler(db)
+
+	// Step 1: Panitia creates a new event via Create handler
+	start := time.Now().Add(24 * time.Hour)
+	end := start.Add(4 * time.Hour)
+	createBody := handlers.EventRequest{
+		Title:       "Seminar Nasional AI 2026",
+		Description: "Seminar seputar tren AI terkini",
+		Location:    "Bandung",
+		StartTime:   &start,
+		EndTime:     &end,
+		IsPaid:      false,
+		Quota:       200,
+	}
+	createReq := newEventRequest(http.MethodPost, "/api/events", organizer.ID, models.RoleAdminPanitia, createBody)
+	createRR := httptest.NewRecorder()
+	h.Create(createRR, createReq)
+
+	if createRR.Code != http.StatusCreated {
+		t.Fatalf("expected 201 on event creation, got %d: %s", createRR.Code, createRR.Body.String())
+	}
+	createdEvent := testutil.DecodeData[models.Event](t, createRR.Body.Bytes())
+
+	// Step 2: Panitia immediately submits the event for approval
+	submitReq := newEventRequest(http.MethodPost, fmt.Sprintf("/api/events/%d/submit", createdEvent.ID), organizer.ID, models.RoleAdminPanitia, nil)
+	submitReq = withChiParam(submitReq, "id", fmt.Sprintf("%d", createdEvent.ID))
+	submitRR := httptest.NewRecorder()
+	h.SubmitForApproval(submitRR, submitReq)
+
+	if submitRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 on submit for approval, got %d: %s", submitRR.Code, submitRR.Body.String())
+	}
+	submittedEvent := testutil.DecodeData[models.Event](t, submitRR.Body.Bytes())
+	if submittedEvent.Status != models.EventStatusPendingApproval {
+		t.Errorf("expected status 'pending_approval', got '%s'", submittedEvent.Status)
 	}
 }
 

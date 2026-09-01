@@ -164,7 +164,27 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		EventVersion: 1,
 	}
 
-	if err := h.DB.Create(&event).Error; err != nil {
+	ticketName := strings.TrimSpace(req.TicketType)
+	if ticketName == "" {
+		ticketName = "Tiket Masuk"
+	}
+
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&event).Error; err != nil {
+			return err
+		}
+		defaultTicketType := models.TicketType{
+			EventID:     event.ID,
+			Name:        ticketName,
+			IsPaid:      event.IsPaid,
+			Price:       event.Price,
+			MaxCapacity: event.Quota,
+			SoldCount:   0,
+			IsActive:    true,
+		}
+		return tx.Create(&defaultTicketType).Error
+	})
+	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to create event")
 		return
 	}

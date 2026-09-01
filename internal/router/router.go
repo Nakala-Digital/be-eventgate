@@ -30,6 +30,7 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 	authHandler := handlers.NewAuthHandler(db, jwtSecret, jwtExpiryHrs)
 	userHandler := handlers.NewUserHandler(db)
 	eventHandler := handlers.NewEventHandler(db)
+	ticketTypeHandler := handlers.NewTicketTypeHandler(db)
 	questionHandler := handlers.NewQuestionHandler(db)
 	registrationHandler := handlers.NewRegistrationHandler(db)
 
@@ -84,6 +85,14 @@ func New(db *gorm.DB, jwtSecret string, jwtExpiryHrs int) http.Handler {
 				r.Use(appmw.RequireRole(models.RoleSuperAdmin))
 				r.Post("/events/{id}/publish", eventHandler.PublishEvent)
 				r.Post("/events/{id}/unpublish", eventHandler.UnpublishEvent)
+			})
+
+			// Area EVG-46: Manajemen Tipe Tiket Acara
+			r.Route("/events/{id}/ticket-types", func(r chi.Router) {
+				r.Get("/", ticketTypeHandler.ListByEvent)
+				r.Post("/", ticketTypeHandler.Create)
+				r.Put("/{ticketTypeID}", ticketTypeHandler.Update)
+				r.Delete("/{ticketTypeID}", ticketTypeHandler.Delete)
 			})
 
 			// Area EVG-47: Skema Formulir Dinamis

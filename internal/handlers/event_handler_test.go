@@ -188,6 +188,14 @@ func TestEventHandler_CRUD(t *testing.T) {
 		}
 		event1ID = createdEvent.ID
 
+		var defaultTT models.TicketType
+		if err := db.Where("event_id = ?", event1ID).First(&defaultTT).Error; err != nil {
+			t.Fatalf("expected default ticket type to be auto-seeded: %v", err)
+		}
+		if defaultTT.Price != 50000 || defaultTT.MaxCapacity != 100 || !defaultTT.IsPaid {
+			t.Fatalf("unexpected default ticket type fields: %+v", defaultTT)
+		}
+
 		// Super Admin creates Event 2
 		body2, _ := json.Marshal(map[string]interface{}{
 			"title":       "Global Tech Summit",
